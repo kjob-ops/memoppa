@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAj5Y7PLvRLRRl8Ay1JMUWjJsbgCAqygG0",
@@ -26,6 +26,8 @@ let currentMemoId = null;
 let currentFilter = 'all'; 
 let currentSortIndex = 0; 
 let currentSearch = '';
+let selectedTags = [];
+let tagSearchMode = "and";
 let saveTimeout = null;
 let isMasked = false; 
 let isSidebarPinned = false; 
@@ -37,6 +39,12 @@ let selectedMemos = new Set();
 let currentTheme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
 let currentFontFamily = 'system';
 let currentFontSize = '16px';
+// PC/スマホ別フォント設定
+const isMobileDevice = () => window.innerWidth <= 768;
+let fontFamilyPc = 'system';
+let fontSizePc = '16px';
+let fontFamilyMobile = 'system';
+let fontSizeMobile = '15px';
 let targetEmail = ''; 
 
 const sortOptions = [
@@ -119,8 +127,8 @@ const settingsModal = document.getElementById('settingsModal');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const themeLightBtn = document.getElementById('themeLightBtn');
 const themeDarkBtn = document.getElementById('themeDarkBtn');
-const fontFamilySelect = document.getElementById('fontFamilySelect');
-const fontSizeBtns = document.querySelectorAll('.font-size-btn');
+const fontFamilySelect = document.getElementById('fontFamilySelectPc'); // 後方互換
+const fontSizeBtns = document.querySelectorAll('.font-size-btn-pc');
 const targetEmailInput = document.getElementById('targetEmailInput');
 const saveEmailBtn = document.getElementById('saveEmailBtn'); 
 
@@ -141,12 +149,24 @@ function showToast(message, icon = 'info') {
     toast.className = 'toast';
     toast.innerHTML = `<span class="material-symbols-rounded">${icon}</span> <span>${message}</span>`;
     toastContainer.appendChild(toast);
-    
     setTimeout(() => { toast.classList.add('show'); }, 10);
-    setTimeout(() => { 
-        toast.classList.remove('show'); 
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 4000);
+}
+
+function showToastWithUndo(message, onUndo) {
+    if(!toastContainer) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-with-undo';
+    toast.innerHTML = `<span class="material-symbols-rounded">delete</span> <span>${message}</span><button class="toast-undo-btn">元に戻す</button>`;
+    toastContainer.appendChild(toast);
+    let undone = false;
+    toast.querySelector('.toast-undo-btn').addEventListener('click', () => {
+        if(undone) return; undone = true;
+        onUndo(); toast.classList.remove('show'); setTimeout(() => toast.remove(), 300);
+    });
+    setTimeout(() => { toast.classList.add('show'); }, 10);
+    const timer = setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 5000);
+    toast.querySelector('.toast-undo-btn').addEventListener('click', () => clearTimeout(timer));
 }
 
 // ==========================================
@@ -159,6 +179,7 @@ onAuthStateChanged(auth, (user) => {
         appContainer?.classList.remove('hidden');
         
         if(currentUserEmailDisplay) currentUserEmailDisplay.textContent = currentUser.email;
+        updateAttachButtonsVisibility();
 
         if (!isEventsSetup) {
             const lastLoginStr = window.localStorage.getItem('pepperLastLogin');
@@ -174,10 +195,28 @@ onAuthStateChanged(auth, (user) => {
         loadUserSettings(); 
         initRealtimeMemos();
         if (!isEventsSetup) { setupEventListeners(); isEventsSetup = true; }
+        // 共有URLからのインポート処理
+        const urlShare = new URLSearchParams(location.search).get('share');
+        const pendingShare = sessionStorage.getItem('pendingShareId');
+        const shareId = urlShare || pendingShare;
+        if(shareId) {
+            sessionStorage.removeItem('pendingShareId');
+            history.replaceState({}, '', location.pathname);
+            setTimeout(() => importSharedPrompt(shareId), 1500); // メモ読み込み後に実行
+        }
     } else {
-        currentUser = null; 
-        loginScreen?.classList.remove('hidden'); 
+        currentUser = null;
         appContainer?.classList.add('hidden');
+        // 共有URLのパラメータを検出
+        const urlShare = new URLSearchParams(location.search).get('share');
+        if(urlShare) {
+            sessionStorage.setItem('pendingShareId', urlShare);
+            history.replaceState({}, '', location.pathname);
+            showSharePreview(urlShare);
+        } else {
+            loginScreen?.classList.remove('hidden');
+            document.getElementById('sharePreviewScreen')?.classList.add('hidden');
+        }
     }
 });
 
@@ -207,6 +246,199 @@ async function signInWithChromeIdentity() {
     if (!accessToken) throw new Error('no-access-token');
     const credential = GoogleAuthProvider.credential(null, accessToken);
     await signInWithCredential(auth, credential);
+}
+
+// ==========================================
+// Google Drive添付機能（ホワイトリスト制限）
+// ==========================================
+const DRIVE_ATTACH_WHITELIST = ['job.komineshi@gmail.com', 'hellokomine@gmail.com'];
+const DRIVE_ATTACH_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_MAX_FILE_SIZE = 25 * 1024 * 1024;
+let driveTokenClient = null;
+let driveAccessToken = null;
+let driveTokenExpiresAt = 0;
+let driveFolderId = null;
+
+function isDriveAttachEnabled() {
+    return !!(currentUser && currentUser.email && DRIVE_ATTACH_WHITELIST.includes(currentUser.email));
+}
+function updateAttachButtonsVisibility() {
+    const enabled = isDriveAttachEnabled();
+    const mainAttachBtn = document.getElementById('mainAttachBtn');
+    const mobileAttachBtn = document.getElementById('mobileAttachBtn');
+    if(mainAttachBtn) mainAttachBtn.classList.toggle('hidden', !enabled);
+    if(mobileAttachBtn) mobileAttachBtn.classList.toggle('hidden', !enabled);
+}
+function ensureDriveTokenClient() {
+    if(driveTokenClient) return driveTokenClient;
+    driveTokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_OAUTH_CLIENT_ID, scope: DRIVE_ATTACH_SCOPE, prompt: '', callback: () => {}
+    });
+    return driveTokenClient;
+}
+function requestDriveToken(interactive) {
+    return new Promise((resolve, reject) => {
+        try {
+            const client = ensureDriveTokenClient();
+            client.callback = (resp) => {
+                if(resp && resp.access_token) { driveAccessToken = resp.access_token; driveTokenExpiresAt = Date.now() + ((resp.expires_in || 3500) * 1000); resolve(driveAccessToken); }
+                else reject(new Error(resp?.error || 'no-token'));
+            };
+            client.error_callback = (err) => reject(new Error(err?.type || 'token-error'));
+            client.requestAccessToken({ prompt: interactive ? 'consent' : '' });
+        } catch(e) { reject(e); }
+    });
+}
+async function ensureDriveToken() {
+    if(driveAccessToken && Date.now() < driveTokenExpiresAt - 5*60*1000) return driveAccessToken;
+    const consentKey = `memoppaDriveConsent_${currentUser?.uid||''}`;
+    const hasConsented = localStorage.getItem(consentKey) === '1';
+    const token = await requestDriveToken(!hasConsented);
+    localStorage.setItem(consentKey, '1');
+    return token;
+}
+async function driveFetch(url, options={}) {
+    const token = await ensureDriveToken();
+    const res = await fetch(url, { ...options, headers: { ...options.headers, Authorization: `Bearer ${token}` } });
+    if(!res.ok) throw new Error(`Drive API error (${res.status})`);
+    return res;
+}
+async function getOrCreateDriveFolder() {
+    if(driveFolderId) return driveFolderId;
+    const cacheKey = `memoppaDriveFolderId_${currentUser?.uid||''}`;
+    const cached = localStorage.getItem(cacheKey);
+    if(cached) { driveFolderId = cached; return driveFolderId; }
+    const q = encodeURIComponent("name='memoppa' and mimeType='application/vnd.google-apps.folder' and trashed=false and 'root' in parents");
+    const searchRes = await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id)`);
+    const searchData = await searchRes.json();
+    if(searchData.files?.length > 0) { driveFolderId = searchData.files[0].id; }
+    else {
+        const createRes = await driveFetch('https://www.googleapis.com/drive/v3/files', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ name: 'memoppa', mimeType: 'application/vnd.google-apps.folder' })
+        });
+        driveFolderId = (await createRes.json()).id;
+    }
+    localStorage.setItem(cacheKey, driveFolderId);
+    return driveFolderId;
+}
+async function uploadFileToDrive(file) {
+    const folderId = await getOrCreateDriveFolder();
+    const boundary = 'memoppa_' + Date.now();
+    const meta = JSON.stringify({ name: file.name, parents: [folderId] });
+    const fileBuffer = await file.arrayBuffer();
+    const body = new Blob([`--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: ${file.type||'application/octet-stream'}\r\n\r\n`, fileBuffer, `\r\n--${boundary}--`]);
+    const token = await ensureDriveToken();
+    const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size', {
+        method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': `multipart/related; boundary=${boundary}` }, body
+    });
+    if(!res.ok) throw new Error(`Upload failed (${res.status})`);
+    const data = await res.json();
+    return { fileId: data.id, fileName: data.name || file.name, mimeType: data.mimeType || file.type, size: file.size };
+}
+async function deleteFileFromDrive(fileId) {
+    try { await driveFetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, { method: 'DELETE' }); } catch(e) {}
+}
+function formatFileSize(bytes) {
+    if(!bytes && bytes!==0) return '';
+    if(bytes < 1024) return `${bytes} B`;
+    if(bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`;
+    return `${(bytes/(1024*1024)).toFixed(1)} MB`;
+}
+function escapeAttachAttr(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function renderAttachments(memo) {
+    const cont = document.getElementById('memoAttachmentsContainer');
+    if(!cont) return;
+    const attachments = (memo?.attachments) || [];
+    if(!isDriveAttachEnabled() || attachments.length === 0) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
+    cont.classList.remove('hidden');
+    const itemsHtml = attachments.map((att, idx) => {
+        const isImage = (att.mimeType||'').startsWith('image/');
+        const dlUrl = att.fileId ? `https://drive.google.com/uc?export=download&id=${att.fileId}` : '';
+        const viewUrl = att.fileId ? `https://drive.google.com/file/d/${att.fileId}/view` : '';
+        if(isImage) {
+            const thumbSrc = att.fileId ? `https://drive.google.com/thumbnail?id=${att.fileId}&sz=w200` : '';
+            return `<div class="attachment-item attachment-image" data-idx="${idx}">
+                <a href="${viewUrl}" target="_blank" rel="noopener" class="attach-img-link">
+                    ${thumbSrc ? `<img src="${thumbSrc}" alt="${escapeAttachAttr(att.fileName||'')}" class="attach-thumb">` : `<span class="material-symbols-rounded" style="font-size:28px">image</span>`}
+                </a>
+                <div class="attach-img-actions">
+                    <a href="${dlUrl}" target="_blank" rel="noopener" class="attach-icon-btn" title="DL"><span class="material-symbols-rounded">download</span></a>
+                    <button class="attach-icon-btn danger attachment-remove-btn" data-remove-idx="${idx}"><span class="material-symbols-rounded">close</span></button>
+                </div>
+            </div>`;
+        }
+        const isPdf = (att.mimeType||'').includes('pdf'); const isZip = (att.mimeType||'').includes('zip');
+        return `<div class="attachment-item attachment-file" data-idx="${idx}">
+            <a href="${viewUrl}" target="_blank" rel="noopener" class="attach-file-link">
+                <span class="material-symbols-rounded attach-file-icon ${isPdf?'pdf':isZip?'zip':''}">${isPdf?'picture_as_pdf':isZip?'folder_zip':'draft'}</span>
+                <div class="attachment-info"><div class="attachment-name">${escapeAttachAttr(att.fileName||'ファイル')}</div><div class="attachment-size">${formatFileSize(att.size)}</div></div>
+            </a>
+            <a href="${dlUrl}" target="_blank" rel="noopener" class="attach-icon-btn" title="DL"><span class="material-symbols-rounded">download</span></a>
+            <button class="attach-icon-btn danger attachment-remove-btn" data-remove-idx="${idx}"><span class="material-symbols-rounded">close</span></button>
+        </div>`;
+    }).join('');
+    const bulkBtn = attachments.length >= 2
+        ? `<button class="attach-bulk-dl-btn" id="attachBulkDlBtn" title="すべてまとめてZIPでダウンロード"><span class="material-symbols-rounded">folder_zip</span></button>` : '';
+    cont.innerHTML = `<div class="attachment-list-wrap"><div class="attachment-list">${itemsHtml}</div>${bulkBtn}</div>`;
+    cont.querySelectorAll('.attachment-remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => { e.stopPropagation(); e.preventDefault(); removeAttachment(parseInt(btn.getAttribute('data-remove-idx'))); });
+    });
+    const bulkDlBtn = document.getElementById('attachBulkDlBtn');
+    if(bulkDlBtn) bulkDlBtn.addEventListener('click', async () => {
+        showToast('ZIPを準備中...', 'cloud_download');
+        try {
+            const JSZip = (await import('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js')).default || window.JSZip;
+            const zip = new JSZip();
+            const token = await ensureDriveToken();
+            await Promise.all(attachments.map(async (att) => {
+                if(!att.fileId) return;
+                const res = await fetch(`https://www.googleapis.com/drive/v3/files/${att.fileId}?alt=media`, { headers: { Authorization: `Bearer ${token}` } });
+                const blob = await res.blob();
+                zip.file(att.fileName || `file_${att.fileId}`, blob);
+            }));
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(zipBlob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'memoppa_attachments.zip';
+            document.body.appendChild(a); a.click();
+            setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+            showToast('ZIPダウンロード完了', 'check_circle');
+        } catch(e) {
+            console.error(e);
+            showToast('ダウンロードに失敗しました', 'error');
+        }
+    });
+}
+async function removeAttachment(idx) {
+    const memo = memos.find(m => m.id === currentMemoId);
+    if(!memo?.attachments?.[idx]) return;
+    const [removed] = memo.attachments.splice(idx, 1);
+    memo.updatedAt = new Date().toISOString(); cloudSaveMemo(memo); renderAttachments(memo);
+    if(removed?.fileId) deleteFileFromDrive(removed.fileId);
+}
+async function handleAttachButtonClick() {
+    if(!currentMemoId) { showToast('先にメモを選択してください', 'info'); return; }
+    try { await ensureDriveToken(); document.getElementById('attachFileInput')?.click(); }
+    catch(e) { showToast('Drive認証に失敗しました。もう一度📎を押してください', 'error'); }
+}
+async function handleAttachFiles(fileList) {
+    const memo = memos.find(m => m.id === currentMemoId);
+    if(!memo) return;
+    if(!memo.attachments) memo.attachments = [];
+    for(const file of Array.from(fileList||[])) {
+        const allowed = file.type.startsWith('image/') || file.type.includes('pdf') || file.type.includes('zip') || /\.(zip|pdf)$/i.test(file.name);
+        if(!allowed) { showToast(`非対応ファイル: ${file.name}`, 'error'); continue; }
+        if(file.size > DRIVE_MAX_FILE_SIZE) { showToast(`25MB超過: ${file.name}`, 'error'); continue; }
+        showToast(`アップロード中: ${file.name}`, 'cloud_upload');
+        try {
+            const att = await uploadFileToDrive(file);
+            memo.attachments.push(att); memo.updatedAt = new Date().toISOString(); cloudSaveMemo(memo); renderAttachments(memo);
+            showToast(`添付: ${file.name}`, 'check_circle');
+        } catch(e) { showToast(`失敗: ${file.name}`, 'error'); }
+    }
 }
 
 // アプリ内ブラウザ（Instagram/LINE/Facebook等）ではGoogleログインがブロックされるため検出して案内
@@ -260,7 +492,59 @@ googleLoginBtn?.addEventListener('click', async () => {
 
 // リダイレクト方式で戻ってきた場合の結果処理
 getRedirectResult(auth).catch((error) => { if(error && error.code) console.error('[memoppa] redirect result error:', error.code, error.message); });
-logoutBtn?.addEventListener('click', () => { if(confirm("Sign out from memoppa?")) { signOut(auth); if(settingsModal) settingsModal.style.display = 'none'; } });
+logoutBtn?.addEventListener('click', () => { if(confirm("memoppaからサインアウトしますか？")) { signOut(auth); if(settingsModal) settingsModal.style.display = 'none'; } });
+    const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+    const deleteAccountModal = document.getElementById('deleteAccountModal');
+    const deleteAccountCancelBtn = document.getElementById('deleteAccountCancelBtn');
+    const deleteAccountConfirmBtn = document.getElementById('deleteAccountConfirmBtn');
+    const deleteAccountConfirmCheck = document.getElementById('deleteAccountConfirmCheck');
+
+    if(deleteAccountBtn) deleteAccountBtn.addEventListener('click', () => {
+        deleteAccountModal.classList.remove('hidden');
+        deleteAccountModal.style.display = 'flex';
+        if(deleteAccountConfirmCheck) deleteAccountConfirmCheck.checked = false;
+        if(deleteAccountConfirmBtn) deleteAccountConfirmBtn.disabled = true;
+    });
+    if(deleteAccountCancelBtn) deleteAccountCancelBtn.addEventListener('click', () => {
+        deleteAccountModal.classList.add('hidden');
+        deleteAccountModal.style.display = 'none';
+    });
+    if(deleteAccountConfirmCheck) deleteAccountConfirmCheck.addEventListener('change', (e) => {
+        if(deleteAccountConfirmBtn) deleteAccountConfirmBtn.disabled = !e.target.checked;
+    });
+    if(deleteAccountConfirmBtn) deleteAccountConfirmBtn.addEventListener('click', async () => {
+        deleteAccountConfirmBtn.disabled = true;
+        deleteAccountConfirmBtn.textContent = '削除中...';
+        try {
+            await currentUser.delete();
+            await signOut(auth);
+            deleteAccountModal.style.display = 'none';
+            showToast('アカウントを削除しました', 'check_circle');
+        } catch(e) {
+            if(e.code === 'auth/requires-recent-login') {
+                alert('セキュリティのため、一度サインアウトして再度ログインしてから削除してください。');
+                await signOut(auth);
+            } else {
+                showToast('削除に失敗しました: ' + e.message, 'error');
+            }
+            deleteAccountConfirmBtn.disabled = false;
+            deleteAccountConfirmBtn.textContent = '削除する';
+        }
+    });
+const switchAccountBtn = document.getElementById('switchAccountBtn');
+if(switchAccountBtn) switchAccountBtn.addEventListener('click', async () => {
+    try {
+        await signOut(auth);
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        await signInWithPopup(auth, provider);
+        if(settingsModal) settingsModal.style.display = 'none';
+    } catch(e) {
+        if(e.code !== 'auth/popup-closed-by-user') {
+            console.error('account switch error:', e);
+        }
+    }
+});
 
 // ==========================================
 // DB読み込み
@@ -312,25 +596,8 @@ function extractTags(text) {
 }
 
 function updateEditorTagsDisplay() {
-    if(!memoTagsContainer || !memoContent) return;
-    const tags = extractTags(memoContent.innerText || '');
-    memoTagsContainer.innerHTML = '';
-    tags.forEach(tag => {
-        const chip = document.createElement('div');
-        chip.className = 'tag-chip';
-        chip.innerHTML = `<span class="material-symbols-rounded">tag</span><span class="tag-chip-label">${escapeHtml(tag)}</span><button class="tag-remove-btn" title="タグを解除（本文は残ります）"><span class="material-symbols-rounded">close</span></button>`;
-        chip.addEventListener('click', () => {
-            setSearch(tag);
-            updateSidebarTags(); renderMemoList();
-            if(!isSidebarPinned && window.innerWidth > 768) toggleSidebar(true);
-            if(window.innerWidth <= 768) showMobileList();
-        });
-        chip.querySelector('.tag-remove-btn').addEventListener('click', (e) => {
-            e.stopPropagation();
-            untagFromCurrentMemo(tag);
-        });
-        memoTagsContainer.appendChild(chip);
-    });
+    // エディタ上部のタグチップ表示は廃止（検索チップ・一覧カードで代替済み）
+    if(memoTagsContainer) memoTagsContainer.innerHTML = '';
 }
 
 // 本文中の「#タグ」の # だけを外してタグ化を解除する（本文テキストは保持）
@@ -355,16 +622,34 @@ function setSearch(value) {
 
 function updateSidebarTags() {
     if(!sidebarTagsContainer) return;
+    sidebarTagsContainer.innerHTML = '';
+
+    // プロンプトチップ（緑・先頭）
+    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
+        .sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 8);
+    prompts.forEach(m => {
+        const btn = document.createElement('button');
+        btn.className = 'sidebar-tag-chip sidebar-prompt-chip';
+        btn.innerHTML = `<span class="material-symbols-rounded" style="font-size:13px;vertical-align:-2px;color:var(--accent-color)">bolt</span>${escapeHtml(m.title || '無題')}`;
+        btn.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            sidebarTagsContainer.classList.remove('show');
+            selectMemo(m.id);
+        });
+        sidebarTagsContainer.appendChild(btn);
+    });
+
+    // タグチップ（グレー）
     const allTags = new Set();
     memos.forEach(m => { if (!m.isTrashed && !m.isPrivate) { extractTags(m.content).forEach(t => allTags.add(t)); } });
-    sidebarTagsContainer.innerHTML = '';
     Array.from(allTags).sort().forEach(tag => {
         const btn = document.createElement('button');
-        btn.className = 'sidebar-tag-chip'; btn.textContent = `#${tag}`;
+        btn.className = 'sidebar-tag-chip';
+        btn.textContent = `#${tag}`;
         if (currentSearch === tag.toLowerCase()) btn.classList.add('active');
         btn.addEventListener('mousedown', (e) => {
             e.preventDefault();
-            if (currentSearch === tag.toLowerCase()) { setSearch(''); } 
+            if (currentSearch === tag.toLowerCase()) { setSearch(''); }
             else { setSearch(tag); }
             updateSidebarTags(); renderMemoList();
             sidebarTagsContainer.classList.remove('show');
@@ -376,9 +661,11 @@ function updateSidebarTags() {
 function toggleSidebar(forceClose = false) {
     if(!sidebar) return;
     if (forceClose || sidebar.classList.contains('open')) {
-        sidebar.classList.remove('open'); if(sidebarOverlay) sidebarOverlay.classList.remove('show'); document.body.classList.remove('sidebar-open');
+        sidebar.classList.remove('open');
+        document.body.classList.remove('sidebar-open');
     } else {
-        sidebar.classList.add('open'); if(sidebarOverlay) sidebarOverlay.classList.add('show'); document.body.classList.add('sidebar-open');
+        sidebar.classList.add('open');
+        document.body.classList.add('sidebar-open');
     }
 }
 function showMobileEditor() { appContainer?.classList.add('sp-view-editor'); }
@@ -470,6 +757,18 @@ function setupEventListeners() {
     initCmdPalette();
     const qpBar = document.getElementById('quickPromptBar');
     if (qpBar) qpBar.addEventListener('wheel', (e) => { if (e.deltaY !== 0) { e.preventDefault(); qpBar.scrollLeft += e.deltaY; } }, { passive: false });
+
+    // 検索チップの左右スクロールボタン（視覚フィードバック付き）
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.chip-scroll-btn');
+        if (!btn) return;
+        const dir = parseInt(btn.dataset.dir);
+        const row = btn.closest('.search-mode-chip-row-wrap')?.querySelector('.search-mode-chip-row');
+        if (row) row.scrollBy({ left: 200 * dir, behavior: 'smooth' });
+        // クリック視覚フィードバック（緑背景→元に戻る）
+        btn.classList.add('chip-scroll-btn-active');
+        setTimeout(() => btn.classList.remove('chip-scroll-btn-active'), 300);
+    });
     const onboardingStartBtn = document.getElementById('onboardingStartBtn');
     if(onboardingStartBtn) onboardingStartBtn.addEventListener('click', closeOnboarding);
     const reopenOnboardingBtn = document.getElementById('reopenOnboardingBtn');
@@ -487,8 +786,43 @@ function setupEventListeners() {
     if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
 
     if(mainPinBtn) mainPinBtn.addEventListener('click', () => togglePin());
+    const mainAttachBtn = document.getElementById('mainAttachBtn');
+    const mobileAttachBtn = document.getElementById('mobileAttachBtn');
+    const attachFileInput = document.getElementById('attachFileInput');
+    if(mainAttachBtn) mainAttachBtn.addEventListener('click', () => handleAttachButtonClick());
+    if(mobileAttachBtn) mobileAttachBtn.addEventListener('click', () => handleAttachButtonClick());
+    if(attachFileInput) attachFileInput.addEventListener('change', (e) => { handleAttachFiles(e.target.files); e.target.value = ''; });
+    // クリップボード画像ペースト
+    const memoContent = document.getElementById('memoContent');
+    if(memoContent) memoContent.addEventListener('paste', async (e) => {
+        if(!isDriveAttachEnabled()) return;
+        const items = Array.from(e.clipboardData?.items||[]).filter(i => i.type.startsWith('image/'));
+        if(!items.length) return;
+        e.preventDefault();
+        for(const item of items) {
+            const file = item.getAsFile();
+            if(!file) continue;
+            const ext = file.type === 'image/png' ? 'png' : 'jpg';
+            await handleAttachFiles([new File([file], `paste_${Date.now()}.${ext}`, { type: file.type })]);
+        }
+    });
     if(mainPromptBtn) mainPromptBtn.addEventListener('click', () => togglePromptFlag());
+    const mobilePromptBtn = document.getElementById('mobilePromptBtn');
+    if(mobilePromptBtn) mobilePromptBtn.addEventListener('click', () => togglePromptFlag());
+    // プロンプトバー開閉トグル
+    const qpToggleBtn = document.getElementById('qpToggleBtn');
+    if(qpToggleBtn) qpToggleBtn.addEventListener('click', () => {
+        const wrap = document.getElementById('quickPromptBarWrap');
+        if(wrap) { wrap.classList.add('hidden'); localStorage.setItem('memoppaQpBarOpen', '0'); }
+    });
     if(promptFilterBtn) promptFilterBtn.addEventListener('click', () => setFilter('prompt'));
+    // ･･メニュー
+    const filterMoreBtn = document.getElementById('filterMoreBtn');
+    const filterMoreMenu = document.getElementById('filterMoreMenu');
+    if(filterMoreBtn) filterMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); filterMoreMenu?.classList.toggle('hidden'); });
+    if(archiveBtn) archiveBtn.addEventListener('click', () => { setFilter('archive'); filterMoreMenu?.classList.add('hidden'); });
+    if(trashBtn) trashBtn.addEventListener('click', () => { setFilter('trash'); filterMoreMenu?.classList.add('hidden'); });
+    document.addEventListener('click', (e) => { if(!e.target.closest('.filter-more-wrap')) filterMoreMenu?.classList.add('hidden'); });
     if(closePromptVarBtn) closePromptVarBtn.addEventListener('click', closePromptVarModal);
     if(promptVarModal) promptVarModal.addEventListener('click', (e) => { if(e.target === promptVarModal) closePromptVarModal(); });
     if(promptVarCopyBtn) promptVarCopyBtn.addEventListener('click', () => {
@@ -596,18 +930,106 @@ function setupEventListeners() {
     if(mobileMailBtn) mobileMailBtn.addEventListener('click', () => handleMail(mobileMailBtn));
 
     if(allBtn) allBtn.addEventListener('click', () => setFilter('all'));
-    if(archiveBtn) archiveBtn.addEventListener('click', () => setFilter('archive'));
-    if(trashBtn) trashBtn.addEventListener('click', () => setFilter('trash')); 
+    // プロンプトハブ内検索
+    const promptHubSearch = document.getElementById('promptHubSearch');
+    if(promptHubSearch) promptHubSearch.addEventListener('input', (e) => renderPromptHub(e.target.value.toLowerCase()));
     
     if(searchInput) searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !e.target.value); updateSidebarTags(); renderMemoList(); renderSearchMode(); });
     if(searchClearBtn) searchClearBtn.addEventListener('click', () => { currentSearch = ''; if(searchInput) { searchInput.value = ''; searchInput.focus(); } searchClearBtn.classList.add('hidden'); updateSidebarTags(); renderMemoList(); renderSearchMode(); });
+    // ロゴクリックでホームに戻る
+    const logoHomeBtn = document.getElementById('logoHomeBtn');
+    if(logoHomeBtn) logoHomeBtn.addEventListener('click', () => {
+        setSearch(''); setFilter('all');
+        exitSearchMode();
+        if(searchInput) searchInput.value = '';
+        if(searchClearBtn) searchClearBtn.classList.add('hidden');
+        renderMemoList();
+        // 先頭のメモを開く
+        const first = memos.find(m => !m.isTrashed && !m.isPrivate && (m.title || '').trim() || (m.content || '').replace(/<[^>]*>/g,'').trim());
+        if(first && window.innerWidth > 768) selectMemo(first.id);
+        if(window.innerWidth <= 768) exitMobileSearchUI();
+    });
+
+    const mobileSearchCloseBtn = document.getElementById('mobileSearchCloseBtn');
+
+    function enterMobileSearchUI() {
+        const sidebarHeader = document.querySelector('.sidebar-header');
+        const sidebarActionsGrid = document.querySelector('.sidebar-actions-grid');
+        if(sidebarHeader) sidebarHeader.classList.add('search-hidden');
+        if(sidebarActionsGrid) sidebarActionsGrid.classList.add('search-hidden');
+        if(mobileSearchCloseBtn) {
+            mobileSearchCloseBtn.innerHTML = '<span class="material-symbols-rounded">arrow_back</span>';
+            mobileSearchCloseBtn.classList.remove('hidden');
+        }
+        if(searchClearBtn) searchClearBtn.classList.add('hidden');
+        updateSidebarTags();
+        sidebarTagsContainer.classList.add('show');
+        const filterSortRow = document.querySelector('.filter-sort-row');
+        if(filterSortRow) filterSortRow.classList.add('search-hidden');
+    }
+
+    function exitMobileSearchUI() {
+        const sidebarHeader = document.querySelector('.sidebar-header');
+        const sidebarActionsGrid = document.querySelector('.sidebar-actions-grid');
+        if(sidebarHeader) sidebarHeader.classList.remove('search-hidden');
+        if(sidebarActionsGrid) sidebarActionsGrid.classList.remove('search-hidden');
+        if(mobileSearchCloseBtn) mobileSearchCloseBtn.classList.add('hidden');
+        sidebarTagsContainer.classList.remove('show');
+        const filterSortRow = document.querySelector('.filter-sort-row');
+        if(filterSortRow) filterSortRow.classList.remove('search-hidden');
+        currentSearch = '';
+        if(searchInput) { searchInput.value = ''; searchInput.blur(); }
+        if(searchClearBtn) searchClearBtn.classList.add('hidden');
+        renderMemoList();
+    }
+
+    if(mobileSearchCloseBtn) mobileSearchCloseBtn.addEventListener('click', exitMobileSearchUI);
+
     if(searchInput) searchInput.addEventListener('focus', () => {
         if (window.innerWidth > 768) { enterSearchMode(); }
-        else { updateSidebarTags(); sidebarTagsContainer.classList.add('show'); }
+        else { enterMobileSearchUI(); }
     });
-    if(searchInput) searchInput.addEventListener('blur', () => { sidebarTagsContainer.classList.remove('show'); });
+    if(searchInput) searchInput.addEventListener('input', (e) => {
+        if(window.innerWidth <= 768) {
+            const hasVal = !!e.target.value;
+            if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !hasVal);
+        }
+    });
+    if(searchInput) searchInput.addEventListener('blur', () => {
+        if(window.innerWidth > 768) sidebarTagsContainer.classList.remove('show');
+    });
     const searchModeCloseBtn = document.getElementById('searchModeCloseBtn');
     if(searchModeCloseBtn) searchModeCloseBtn.addEventListener('click', exitSearchMode);
+
+    // タグ一覧ビューの開閉
+    const showTagListBtn = document.getElementById('showTagListBtn');
+    const tagListView = document.getElementById('tagListView');
+    if(showTagListBtn) showTagListBtn.addEventListener('click', () => {
+        const isOpen = !tagListView.classList.contains('hidden');
+        tagListView.classList.toggle('hidden', isOpen);
+        showTagListBtn.innerHTML = isOpen
+            ? 'すべて見る <span class="material-symbols-rounded">expand_more</span>'
+            : '閉じる <span class="material-symbols-rounded">expand_less</span>';
+        if (!isOpen) renderTagListView();
+    });
+    // AND/ORトグル
+    document.addEventListener('click', (e) => {
+        const modeBtn = e.target.closest('.tag-search-mode-btn');
+        if (!modeBtn) return;
+        tagSearchMode = modeBtn.dataset.mode;
+        document.querySelectorAll('.tag-search-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === tagSearchMode));
+        renderTagListView(); renderSearchMode();
+    });
+    // タグ選択クリア
+    const tagSelectionClearBtn = document.getElementById('tagSelectionClearBtn');
+    if(tagSelectionClearBtn) tagSelectionClearBtn.addEventListener('click', () => {
+        selectedTags = []; renderTagListView(); renderSearchMode();
+    });
+    // 検索モーダルの背景クリックで閉じる
+    const searchModeView = document.getElementById('searchModeView');
+    if(searchModeView) searchModeView.addEventListener('click', (e) => {
+        if (e.target === searchModeView) exitSearchMode();
+    });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && searchModeActive) exitSearchMode(); });
     if(sortBtn) sortBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -637,14 +1059,117 @@ function setupEventListeners() {
 
     if(maskToggleButton) maskToggleButton.addEventListener('click', () => { isMasked = !isMasked; updateMaskButtonIcon(); document.body.classList.toggle('mask-mode', isMasked); });
 
-    if(settingsBtn) settingsBtn.addEventListener('click', () => { settingsModal.classList.remove('hidden'); settingsModal.style.display = 'flex'; });
+    if(settingsBtn) settingsBtn.addEventListener('click', () => { settingsModal.classList.remove('hidden'); settingsModal.style.display = 'flex'; applySettings(); });
     if(closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; saveAndApplySettings(); });
+
+    // PWAホーム画面追加
+    const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+    const pwaSafariHint = document.getElementById('pwaSafariHint');
+    const isMobileBrowser = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    if(isMobileBrowser) {
+        if(isSafari) {
+            // Safari: ヒントを表示
+            if(pwaSafariHint) pwaSafariHint.classList.remove('hidden');
+        } else {
+            // Chrome等: beforeinstallpromptを待つ
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                if(pwaInstallBtn) {
+                    pwaInstallBtn.classList.remove('hidden');
+                    pwaInstallBtn.addEventListener('click', async () => {
+                        e.prompt();
+                        const { outcome } = await e.userChoice;
+                        if(outcome === 'accepted') {
+                            pwaInstallBtn.classList.add('hidden');
+                            showToast('ホーム画面に追加しました！', 'check_circle');
+                        }
+                    });
+                }
+            });
+            // すでにインストール済みの場合はボタンを非表示のまま
+            window.addEventListener('appinstalled', () => {
+                if(pwaInstallBtn) pwaInstallBtn.classList.add('hidden');
+            });
+        }
+    }
+
+    // JSON Import
+    const importFileInput = document.getElementById('importFileInput');
+    if(importDataBtn) importDataBtn.addEventListener('click', () => importFileInput?.click());
+    if(importFileInput) importFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if(!file) return;
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            const items = Array.isArray(data) ? data : (data.memos || data.notes || []);
+            if(!items.length) { showToast('インポートできるデータが見つかりません', 'error'); return; }
+            let count = 0;
+            for(const item of items) {
+                if(!item.title && !item.content) continue;
+                const newMemo = {
+                    id: `memo_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                    title: item.title || '',
+                    content: item.content || item.body || item.text || '',
+                    isPinned: !!item.isPinned,
+                    isPrompt: !!item.isPrompt,
+                    isPrivate: !!item.isPrivate,
+                    archived: !!item.archived,
+                    isTrashed: false,
+                    createdAt: item.createdAt || new Date().toISOString(),
+                    updatedAt: item.updatedAt || new Date().toISOString(),
+                };
+                memos.unshift(newMemo);
+                cloudSaveMemo(newMemo);
+                count++;
+            }
+            renderMemoList();
+            showToast(`${count}件のメモをインポートしました`, 'check_circle');
+        } catch(err) {
+            showToast('JSONの読み込みに失敗しました', 'error');
+        }
+        importFileInput.value = '';
+    });
+    // 設定モーダルの外側クリックで閉じる
+    if(settingsModal) settingsModal.addEventListener('click', (e) => { if(e.target === settingsModal) { settingsModal.style.display = 'none'; saveAndApplySettings(); } });
+    // …ボタン（その他メニュー）
+    const mainShareBtn = document.getElementById('mainShareBtn');
+    if(mainShareBtn) mainShareBtn.addEventListener('click', () => {
+        const memo = memos.find(m => m.id === currentMemoId);
+        if(memo) sharePrompt(memo);
+        document.getElementById('memoMoreMenu')?.classList.add('hidden');
+    });
+    if(mainMoreBtn) mainMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); memoMoreMenu?.classList.toggle('hidden'); });
+    document.addEventListener('click', (e) => { if(memoMoreMenu && !memoMoreMenu.classList.contains('hidden') && !e.target.closest('.action-more-wrap')) memoMoreMenu.classList.add('hidden'); });
+    // エディタ幅ボタン
+    const editorWideBtnEl = document.getElementById('editorWidthWideBtn');
+    const editorNormalBtnEl = document.getElementById('editorWidthStandardBtn');
+    if(editorWideBtnEl) editorWideBtnEl.addEventListener('click', () => { document.body.classList.add('editor-narrow'); saveUserSettings({ editorWide: true }); applySettings(); });
+    if(editorNormalBtnEl) editorNormalBtnEl.addEventListener('click', () => { document.body.classList.remove('editor-narrow'); saveUserSettings({ editorWide: false }); applySettings(); });
     if(themeLightBtn) themeLightBtn.addEventListener('click', () => { currentTheme = 'light'; saveAndApplySettings(); });
     if(themeDarkBtn) themeDarkBtn.addEventListener('click', () => { currentTheme = 'dark'; saveAndApplySettings(); });
-    if(fontFamilySelect) fontFamilySelect.addEventListener('change', (e) => { currentFontFamily = e.target.value; saveAndApplySettings(); });
+    // PC/スマホタブ切り替え
+    document.querySelectorAll('.font-device-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.font-device-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const device = tab.dataset.device;
+            document.getElementById('fontPcPanel')?.classList.toggle('hidden', device !== 'pc');
+            document.getElementById('fontMobilePanel')?.classList.toggle('hidden', device !== 'mobile');
+            updateFontPreview();
+        });
+    });
+    const fontFamilySelectPc = document.getElementById('fontFamilySelectPc');
+    const fontFamilySelectMobile = document.getElementById('fontFamilySelectMobile');
+    if(fontFamilySelectPc) fontFamilySelectPc.addEventListener('change', (e) => { fontFamilyPc = e.target.value; saveAndApplySettings(); });
+    if(fontFamilySelectMobile) fontFamilySelectMobile.addEventListener('change', (e) => { fontFamilyMobile = e.target.value; saveAndApplySettings(); });
+    document.querySelectorAll('.font-size-btn-pc').forEach(btn => btn.addEventListener('click', () => { fontSizePc = btn.dataset.size; saveAndApplySettings(); }));
+    document.querySelectorAll('.font-size-btn-mobile').forEach(btn => btn.addEventListener('click', () => { fontSizeMobile = btn.dataset.size; saveAndApplySettings(); }));
     const defaultAiSelect = document.getElementById('defaultAiSelect');
     if(defaultAiSelect) defaultAiSelect.addEventListener('change', (e) => { defaultAi = e.target.value; saveUserSettings({ defaultAi }); showToast(defaultAi ? `宛先AIを${AI_DESTINATIONS[defaultAi].name}に設定しました` : '宛先AIを解除しました', 'bolt'); });
-    fontSizeBtns.forEach(btn => btn.addEventListener('click', (e) => { currentFontSize = e.target.dataset.size; saveAndApplySettings(); }));
+    // font-size-btn-pc/mobileのイベントは上で登録済み
     
     if(saveEmailBtn) saveEmailBtn.addEventListener('click', () => { targetEmail = targetEmailInput.value; saveUserSettings({ targetEmail }); const o = saveEmailBtn.textContent; saveEmailBtn.textContent = "✔ Registered"; setTimeout(() => saveEmailBtn.textContent = o, 2000); });
 
@@ -734,49 +1259,75 @@ function showAiSelect() {
 }
 
 function createWelcomeMemo(selectedAis = []) {
-    setSearch('');
-    setFilter('all'); 
+    setSearch(''); setFilter('all');
+    const now = Date.now();
+    const tagAi = selectedAis[0] || null;
+    const aiSuffix = tagAi ? `<br><br>@${tagAi}` : '';
 
-    // 体験用サンプルプロンプト（クイックバー・⚡タブが最初から空にならないように）
-    const tagAi = selectedAis.length > 1 ? selectedAis[0] : null;
-    const promptId = "memo_" + Date.now();
-    const samplePrompt = {
-        id: promptId, title: 'サンプル: 文章を要約',
-        content: `以下の文章を{{トーン:ですます調|カジュアル|箇条書き}}で、{{文字数}}字以内に要約してください。<br><br>{{本文}}${tagAi ? `<br><br>@${tagAi}` : ''}`,
-        archived: false, isPinned: false, isPrivate: false, isTrashed: false, isPrompt: true, useCount: 0,
+    // サンプルプロンプト3件（即コピー体験のため）
+    const samples = [
+        {
+            id: `memo_${now+1}`, title: '文章を要約する',
+            content: `以下の文章を{{トーン:ですます調|カジュアル|箇条書き}}で、{{文字数:200}}字以内に要約してください。<br><br>{{本文}}${aiSuffix}`,
+            isPrompt: true, useCount: 3,
+        },
+        {
+            id: `memo_${now+2}`, title: 'アイデアをブラッシュアップ',
+            content: `次のアイデアをより具体的で実行可能な形に改善してください。<br>強みと弱みも指摘してください。<br><br>{{アイデア}}${aiSuffix}`,
+            isPrompt: true, useCount: 2,
+        },
+        {
+            id: `memo_${now+3}`, title: 'メールの返信を書く',
+            content: `以下のメールに対して、{{トーン:丁寧|カジュアル|簡潔}}な返信を日本語で書いてください。<br><br>{{受信メール}}${aiSuffix}`,
+            isPrompt: true, useCount: 1,
+        }
+    ];
+    samples.forEach(s => {
+        const m = { ...s, archived: false, isPinned: false, isPrivate: false, isTrashed: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        memos.unshift(m); cloudSaveMemo(m);
+    });
+
+    // ウェルカムメモ（書く→育てる→使うの3ステップ）
+    const aiSection = tagAi
+        ? `コピーと同時に<b>${AI_DESTINATIONS[tagAi]?.name || tagAi}</b>が自動で開きます。Ctrl+Vで貼るだけです。`
+        : `設定で宛先AIを選ぶと、コピーと同時にChatGPT・Claude・Geminiが自動で開きます。`;
+
+    const content = `<b>memoppa</b>へようこそ。「AIに同じことを何度も打ち直す」をなくすメモ帳です。<br><br><b>⚡ まず30秒で体験してください</b><br>左上の「⚡プロンプト」タブを押してみてください。サンプルが3件登録済みです。コピーボタンを押すと穴埋め画面が出て、埋めた瞬間にコピーされます。<br><br><b>使い方は3ステップだけ</b><br><b>1. 書く</b> — AIへの指示文をメモとして書く。#タグで整理できます。<br><b>2. 育てる</b> — 良い指示文ができたら ⚡ ボタンでプロンプト登録。使うほど上に並びます。<br><b>3. 使う</b> — 「⚡プロンプト」タブからワンクリックでコピー。${aiSection}<br><br><b>便利な書き方</b><br>・<code>{{変数名}}</code> → コピー時に穴埋め<br>・<code>{{トーン:A|B|C}}</code> → コピー時に選択式<br>・<code>#タグ名</code> → 本文に書くだけでタグ付け<br>・<code>/</code> キー → どこからでもプロンプト検索<br><br>まずは「⚡プロンプト」タブを開いて、コピーを試してみてください！`;
+
+    const welcomeId = `memo_${now+4}`;
+    const welcomeMemo = {
+        id: welcomeId, title: 'ようこそ memoppa へ！🚀', content,
+        archived: false, isPinned: true, isPrivate: false, isTrashed: false,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
-    memos.unshift(samplePrompt); cloudSaveMemo(samplePrompt);
-
-    // 選択に応じてウェルカムメモの説明を出し分け
-    let aiSection;
-    if (selectedAis.length === 1) {
-        const name = AI_DESTINATIONS[selectedAis[0]].name;
-        aiSection = `・<b>2秒で使う</b>: プロンプトのコピーボタンを押すと、自動で<b>${name}</b>が開きます（Ctrl+Vで貼るだけ）。宛先はSettingsでいつでも変更できます。`;
-    } else if (selectedAis.length > 1) {
-        const names = selectedAis.map(a => `@${a}`).join(' / ');
-        aiSection = `・<b>宛先タグ</b>: AIを使い分けるあなたには <code>${names}</code> が便利。メモ本文に書くと、コピー時にそのAIが自動で開きます（左のサンプルにも入っています）。`;
-    } else {
-        aiSection = `・<b>宛先AI</b>: Settingsで宛先AIを選ぶと、コピーと同時にそのAIが開きます。メモに <code>@claude</code> のように書けばメモごとの指定も可能。`;
-    }
-
-    const newId = "memo_" + (Date.now() + 1);
-    const content = `memoppa（メモっぱ）へようこそ。<b>新しいタブがAIの作業机になる</b>メモ帳です。<br><br><b>⚡ まず試してほしいこと（30秒）</b><br>・左のリストの「サンプル: 文章を要約」のコピーボタンを押してみてください。変数の穴埋め画面が出ます。<br>・<code>/</code> キーを押すと、どこからでもプロンプトを検索してコピーできます。<br>${aiSection}<br><br><b>📌 基本操作</b><br>・よく使うプロンプトはメモを開いて ⚡ ボタンで登録。使うほど上に並びます。<br>・本文に <code>{{変数名}}</code> と書くと穴埋め式に、<code>{{トーン:A|B}}</code> と書くと選択式になります。<br>・タグ付けは <code>#アイデア</code> のように本文に書くだけ。<br><br><b>💡 便利な機能</b><br>・複数選択（PC: 左端チェックボックス / スマホ: 長押し）から一括メール送信。<br>・SettingsからMarkdown一括エクスポート（AI向け）。<br><br>まずはサンプルをコピーして、2秒の速さを体感してみてください！`;
-    
-    const newMemo = { 
-        id: newId, title: 'ようこそ memoppa へ！🚀', content: content, 
-        archived: false, isPinned: true, isPrivate: false, isTrashed: false, 
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() 
-    };
-    memos.unshift(newMemo); cloudSaveMemo(newMemo); selectMemo(newId, true);
+    memos.unshift(welcomeMemo); cloudSaveMemo(welcomeMemo); selectMemo(welcomeId, true);
 }
 
 function selectMemo(id, openEditorInMobile = true) {
     exitSearchMode();
+    document.getElementById('memoMoreMenu')?.classList.add('hidden');
+    if(mobileActionMenu) { mobileActionMenu.style.display = 'none'; mobileActionMenu.classList.add('hidden'); }
+    document.body.classList.remove('mask-new-memo');
+    // 前のメモがタイトルも本文も空なら自動削除
+    if (currentMemoId && currentMemoId !== id) {
+        const prev = memos.find(m => m.id === currentMemoId);
+        if (prev && !prev.isTrashed && !prev.isPrivate && !prev.isPinned && !prev.isPrompt) {
+            const titleEmpty = !(prev.title || '').trim();
+            const bodyEmpty = !(prev.content || '').replace(/<[^>]*>/g, '').trim();
+            if (titleEmpty && bodyEmpty) {
+                cloudDeleteMemo(prev.id);
+                memos.splice(memos.indexOf(prev), 1);
+            }
+        }
+    }
     currentMemoId = id; const memo = memos.find(m => m.id === id);
     if (memo) {
         if(memoTitle) memoTitle.value = memo.title; if(memoContent) memoContent.innerHTML = memo.content; 
         if(memoUpdatedAt) memoUpdatedAt.textContent = memo.updatedAt ? `最終更新: ${formatDate(memo.updatedAt)}` : '';
+        const memoUpdatedAtStatus = document.getElementById('memoUpdatedAtStatus');
+        if(memoUpdatedAtStatus) memoUpdatedAtStatus.textContent = memo.updatedAt ? `最終更新: ${formatDate(memo.updatedAt)}` : '';
+        const memoUpdatedAtMobile = document.getElementById('memoUpdatedAtMobile');
+        if(memoUpdatedAtMobile) memoUpdatedAtMobile.textContent = memo.updatedAt ? formatDate(memo.updatedAt) : '';
         if(memo.isTrashed) { if(memoTitle) memoTitle.readOnly = true; if(memoContent) memoContent.setAttribute('contenteditable', 'false'); } 
         else { if(memoTitle) memoTitle.readOnly = false; if(memoContent) memoContent.setAttribute('contenteditable', 'true'); }
         
@@ -795,13 +1346,25 @@ function selectMemo(id, openEditorInMobile = true) {
         if(!memo.isTrashed && !memo.isPrivate) focusMemoContent(); 
         updateEditorTagsDisplay(); updateCharCount();
         updateMainActionButtons(memo);
+        renderAttachments(memo);
         renderQuickPromptBar();
     }
 }
 
 function updateMainActionButtons(memo) {
-    if(mainPinBtn) { mainPinBtn.classList.toggle('active', !!memo.isPinned); }
-    if(mainPrivateBtn) { mainPrivateBtn.classList.toggle('active', !!memo.isPrivate); }
+    // ピン留め（常時表示・色で状態を示す）
+    if(mainPinBtn) {
+        mainPinBtn.classList.toggle('active', !!memo.isPinned);
+        mainPinBtn.title = memo.isPinned ? 'ピンを外す' : 'ピン留め';
+        mainPinBtn.querySelector('.material-symbols-rounded').textContent = 'push_pin';
+    }
+    // 非公開（常時表示・色で状態を示す）
+    if(mainPrivateBtn) {
+        mainPrivateBtn.classList.toggle('active', !!memo.isPrivate);
+        mainPrivateBtn.title = memo.isPrivate ? '非公開を解除' : '非公開にする';
+        mainPrivateBtn.querySelector('.material-symbols-rounded').textContent = memo.isPrivate ? 'visibility' : 'visibility_off';
+    }
+    // プロンプト
     if(mainPromptBtn) { mainPromptBtn.classList.toggle('active-prompt', !!memo.isPrompt); mainPromptBtn.title = memo.isPrompt ? 'プロンプト登録を解除' : 'プロンプトとして登録'; }
 }
 
@@ -999,6 +1562,10 @@ function enterSearchMode() {
     searchModeActive = true;
     view.classList.remove('hidden');
     document.getElementById('mainContent')?.classList.add('search-mode');
+    // サイドバーが固定されていなければ自動でピン固定する
+    if (!isSidebarPinned) {
+        document.body.classList.add('sidebar-pinned', 'sidebar-search-auto-pinned');
+    }
     renderSearchMode();
 }
 
@@ -1007,6 +1574,70 @@ function exitSearchMode() {
     searchModeActive = false;
     document.getElementById('searchModeView')?.classList.add('hidden');
     document.getElementById('mainContent')?.classList.remove('search-mode');
+    // 検索時だけ自動固定したサイドバーを元に戻す
+    if (document.body.classList.contains('sidebar-search-auto-pinned')) {
+        document.body.classList.remove('sidebar-pinned', 'sidebar-search-auto-pinned');
+    }
+    // 検索クリア
+    currentSearch = '';
+    if(searchInput) { searchInput.value = ''; }
+    if(searchClearBtn) searchClearBtn.classList.add('hidden');
+    const searchModeInput = document.getElementById('searchModeInput');
+    if(searchModeInput) { searchModeInput.value = ''; const cb = document.getElementById('searchModeInputClearBtn'); if(cb) cb.classList.add('hidden'); }
+    renderMemoList();
+}
+
+function renderTagListView() {
+    const tagListGrid = document.getElementById('tagListGrid');
+    const tagSelectedLabel = document.getElementById('tagSelectedLabel');
+    const tagSelectionClearBtn = document.getElementById('tagSelectionClearBtn');
+    if (!tagListGrid) return;
+
+    // タグ集計
+    const tagMap = new Map();
+    memos.forEach(m => {
+        if (m.isTrashed || m.isPrivate) return;
+        extractTags(m.content).forEach(tag => {
+            if (!tagMap.has(tag)) tagMap.set(tag, { count: 0, lastUpdated: '' });
+            const entry = tagMap.get(tag);
+            entry.count++;
+            if (!entry.lastUpdated || m.updatedAt > entry.lastUpdated) entry.lastUpdated = m.updatedAt;
+        });
+    });
+
+    const sorted = Array.from(tagMap.entries()).sort((a, b) => b[1].count - a[1].count);
+    tagListGrid.innerHTML = '';
+    sorted.forEach(([tag, info]) => {
+        const row = document.createElement('button');
+        const isSelected = selectedTags.includes(tag);
+        row.className = 'tag-list-row' + (isSelected ? ' selected' : '');
+        row.innerHTML = `
+            <span class="tag-list-name">#${escapeHtml(tag)}</span>
+            <span class="tag-list-count">${info.count}件</span>
+            <span class="tag-list-date">${formatDate(info.lastUpdated)}</span>
+            ${isSelected ? '<span class="material-symbols-rounded tag-list-check">check_circle</span>' : ''}
+        `;
+        row.addEventListener('click', () => {
+            if (selectedTags.includes(tag)) {
+                selectedTags = selectedTags.filter(t => t !== tag);
+            } else {
+                selectedTags.push(tag);
+            }
+            renderTagListView();
+            renderSearchMode();
+        });
+        tagListGrid.appendChild(row);
+    });
+
+    // 選択ラベル更新
+    if (tagSelectedLabel) {
+        if (selectedTags.length === 0) {
+            tagSelectedLabel.textContent = 'タグを選択して絞り込み';
+        } else {
+            tagSelectedLabel.textContent = selectedTags.map(t => `#${t}`).join(` ${tagSearchMode.toUpperCase()} `);
+        }
+    }
+    if (tagSelectionClearBtn) tagSelectionClearBtn.classList.toggle('hidden', selectedTags.length === 0);
 }
 
 function renderSearchMode() {
@@ -1016,30 +1647,77 @@ function renderSearchMode() {
     const labelEl = document.getElementById('searchModeResultLabel');
     if (!tagsEl || !resultsEl) return;
 
-    // タグ一覧（広いスペースで大きく表示）
+    // プロンプトチップ
+    const promptsEl = document.getElementById('searchModePrompts');
+    const promptSection = document.getElementById('searchModePromptSection');
+    if (promptsEl) {
+        promptsEl.innerHTML = '';
+        const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
+            .sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 10);
+        prompts.forEach(m => {
+            const chip = document.createElement('button');
+            chip.className = 'sm-tag-chip sm-prompt-chip';
+            chip.innerHTML = `<span class="material-symbols-rounded" style="font-size:13px;vertical-align:-2px;color:var(--accent-color)">bolt</span>${escapeHtml(m.title || '無題')}${m.useCount ? `<span class="sm-prompt-count">${m.useCount}</span>` : ''}`;
+            chip.addEventListener('click', () => { exitSearchMode(); selectMemo(m.id); });
+            promptsEl.appendChild(chip);
+        });
+        if (promptSection) promptSection.style.display = prompts.length === 0 ? 'none' : '';
+    }
+
+    // タグチップ（横スクロール行）
     const allTags = new Set();
     memos.forEach(m => { if (!m.isTrashed && !m.isPrivate) { extractTags(m.content).forEach(t => allTags.add(t)); } });
     tagsEl.innerHTML = '';
     Array.from(allTags).sort().forEach(tag => {
         const chip = document.createElement('button');
-        chip.className = 'sm-tag-chip' + (currentSearch === tag.toLowerCase() ? ' active' : '');
+        const isSelected = selectedTags.includes(tag);
+        chip.className = 'sm-tag-chip' + (isSelected ? ' active' : '');
         chip.textContent = `#${tag}`;
         chip.addEventListener('click', () => {
-            if (currentSearch === tag.toLowerCase()) { setSearch(''); } else { setSearch(tag); }
-            updateSidebarTags(); renderMemoList(); renderSearchMode();
+            if (selectedTags.includes(tag)) {
+                selectedTags = selectedTags.filter(t => t !== tag);
+            } else {
+                selectedTags.push(tag);
+            }
+            renderTagListView();
+            renderSearchMode();
         });
         tagsEl.appendChild(chip);
     });
-    if (allTags.size === 0) tagsEl.innerHTML = '<p class="sm-empty">タグはまだありません。メモ本文に #タグ名 と書くと、ここに表示されます。</p>';
+    if (allTags.size === 0) tagsEl.innerHTML = '<p class="sm-empty">タグはまだありません。</p>';
 
-    // 検索条件に合致するメモ一覧（カード表示）
+    // 検索条件に合致するメモ一覧
     const results = memos.filter(m => !m.isTrashed && !m.isPrivate).filter(m => {
-        if (!currentSearch) return true;
-        const plainText = m.content.replace(/<[^>]*>/g, '').toLowerCase();
-        return (m.title || '').toLowerCase().includes(currentSearch) || plainText.includes(currentSearch);
+        const titleEmpty = !(m.title || '').trim();
+        const bodyEmpty = !(m.content || '').replace(/<[^>]*>/g, '').trim();
+        if (titleEmpty && bodyEmpty) return false;
+        // テキスト検索
+        if (currentSearch) {
+            const plainText = m.content.replace(/<[^>]*>/g, '').toLowerCase();
+            if (!(m.title || '').toLowerCase().includes(currentSearch) && !plainText.includes(currentSearch)) return false;
+        }
+        // 複数タグ検索
+        if (selectedTags.length > 0) {
+            const memoTags = extractTags(m.content).map(t => t.toLowerCase());
+            if (tagSearchMode === 'and') {
+                return selectedTags.every(t => memoTags.includes(t.toLowerCase()));
+            } else {
+                return selectedTags.some(t => memoTags.includes(t.toLowerCase()));
+            }
+        }
+        return true;
     }).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-    if (labelEl) labelEl.textContent = currentSearch ? `「${searchInput ? searchInput.value : currentSearch}」の検索結果（${results.length}件）` : `すべてのメモ（${results.length}件）`;
+    // ラベル
+    let labelText = '';
+    if (selectedTags.length > 0) {
+        labelText = `${selectedTags.map(t=>`#${t}`).join(` ${tagSearchMode.toUpperCase()} `)} の結果（${results.length}件）`;
+    } else if (currentSearch) {
+        labelText = `「${searchInput ? searchInput.value : currentSearch}」の検索結果（${results.length}件）`;
+    } else {
+        labelText = `すべてのメモ（${results.length}件）`;
+    }
+    if (labelEl) labelEl.textContent = labelText;
 
     resultsEl.innerHTML = '';
     if (results.length === 0) {
@@ -1166,8 +1844,12 @@ function directDelete(id) {
                 if(currentMemoId === m.id) { currentMemoId = null; if(memoTitle) memoTitle.value = ''; if(memoContent) memoContent.innerHTML = ''; if(memoUpdatedAt) memoUpdatedAt.textContent = ''; }
             }
         } else { 
-            m.isTrashed = true; m.isPinned = false; m.trashedAt = new Date().toISOString(); cloudSaveMemo(m); 
-            showToast('ゴミ箱に移動しました（10日後に自動削除）', 'delete');
+            m.isTrashed = true; m.isPinned = false; m.trashedAt = new Date().toISOString(); cloudSaveMemo(m);
+            const undoId = m.id;
+            showToastWithUndo('ゴミ箱に移動しました', () => {
+                const target = memos.find(x => x.id === undoId);
+                if(target) { target.isTrashed = false; target.isPinned = false; target.trashedAt = null; cloudSaveMemo(target); renderMemoList(); if(currentMemoId === undoId) selectMemo(undoId); showToast('元に戻しました', 'restore_from_trash'); }
+            });
         } 
         renderMemoList();
         if(window.innerWidth <= 768 && currentMemoId === null) showMobileList();
@@ -1185,7 +1867,17 @@ function directPin(id) {
 }
 function directArchive(id) {
     const m = memos.find(x => x.id === id);
-    if (m && !m.isTrashed) { m.archived = !m.archived; cloudSaveMemo(m); renderMemoList(); showToast(m.archived ? 'アーカイブしました' : 'アーカイブから戻しました', 'archive'); }
+    if (m && !m.isTrashed) {
+        const wasArchived = m.archived;
+        m.archived = !m.archived; cloudSaveMemo(m); renderMemoList();
+        if(m.archived) {
+            showToastWithUndo('アーカイブしました', () => {
+                m.archived = false; cloudSaveMemo(m); renderMemoList(); showToast('元に戻しました', 'unarchive');
+            });
+        } else {
+            showToast('アーカイブから戻しました', 'unarchive');
+        }
+    }
 }
 function directPrivate(id) {
     const m = memos.find(x => x.id === id);
@@ -1193,6 +1885,325 @@ function directPrivate(id) {
 }
 
 async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
+
+// プロンプト共有URL生成
+async function showSharePreview(shareId) {
+    const previewScreen = document.getElementById('sharePreviewScreen');
+    const loginScreen = document.getElementById('loginScreen');
+    if(loginScreen) loginScreen.classList.add('hidden');
+    if(previewScreen) previewScreen.classList.remove('hidden');
+
+    try {
+        // base64デコード
+        let uid, docId;
+        try {
+            const decoded = atob(shareId);
+            const idx = decoded.indexOf('_');
+            uid = decoded.slice(0, idx);
+            docId = decoded.slice(idx + 1);
+        } catch(e) { throw new Error('無効なリンクです'); }
+
+        const ref = doc(db, 'users', uid, 'sharedPrompts', docId);
+        const snap = await getDoc(ref);
+        if(!snap.exists()) throw new Error('このリンクは無効か期限切れです');
+
+        const data = snap.data();
+        const titleEl = document.getElementById('sharePreviewTitle');
+        const contentEl = document.getElementById('sharePreviewContent');
+        if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
+        if(contentEl) contentEl.textContent = (data.content || '').replace(/<[^>]*>/g, '').trim();
+
+        // コピーボタン
+        const copyBtn = document.getElementById('sharePreviewCopyBtn');
+        if(copyBtn) copyBtn.addEventListener('click', () => {
+            const text = (data.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピーしました';
+                setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピーする'; }, 2000);
+            });
+        });
+
+        // 追加ボタン → ログイン画面へ
+        const importBtn = document.getElementById('sharePreviewImportBtn');
+        if(importBtn) importBtn.addEventListener('click', () => {
+            previewScreen?.classList.add('hidden');
+            loginScreen?.classList.remove('hidden');
+        });
+
+    } catch(e) {
+        const contentEl = document.getElementById('sharePreviewContent');
+        if(contentEl) contentEl.textContent = e.message || 'プロンプトを読み込めませんでした';
+    }
+}
+
+// ==========================================
+// 個人情報検出・変数化サジェスト
+// ==========================================
+function detectSensitiveInfo(text) {
+    const findings = [];
+    // メールアドレス
+    const emailRe = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+    let m;
+    while ((m = emailRe.exec(text))) findings.push({ type: 'メールアドレス', value: m[0], varName: 'メールアドレス' });
+    // 電話番号（日本形式）
+    const phoneRe = /0\d{1,4}-\d{1,4}-\d{3,4}|0\d{9,10}/g;
+    while ((m = phoneRe.exec(text))) findings.push({ type: '電話番号', value: m[0], varName: '電話番号' });
+    // URL（memoppa.app自体は除外）
+    const urlRe = /https?:\/\/[^\s<>"]+/g;
+    while ((m = urlRe.exec(text))) { if (!m[0].includes('memoppa.app')) findings.push({ type: 'URL', value: m[0], varName: 'URL' }); }
+    // 敬称付き人名（〜様、〜さん、〜氏）
+    const nameRe = /([一-龥ァ-ヶー]{2,4}(?:様|さん|氏|部長|課長|様方))/g;
+    while ((m = nameRe.exec(text))) findings.push({ type: '人名・敬称', value: m[0], varName: '宛名' });
+    // 会社名（株式会社/有限会社）
+    const companyRe = /((?:株式会社|有限会社)[一-龥ァ-ヶーa-zA-Z0-9]+|[一-龥ァ-ヶーa-zA-Z0-9]+(?:株式会社|有限会社))/g;
+    while ((m = companyRe.exec(text))) findings.push({ type: '会社名', value: m[0], varName: '会社名' });
+    // 重複除去
+    const seen = new Set();
+    return findings.filter(f => { const key = f.value; if(seen.has(key)) return false; seen.add(key); return true; });
+}
+
+function applyVarSubstitution(text, selectedFindings) {
+    let result = text;
+    // 同じvarNameが複数あれば連番をつける
+    const varCounts = {};
+    selectedFindings.forEach(f => {
+        varCounts[f.varName] = (varCounts[f.varName] || 0) + 1;
+        const suffix = varCounts[f.varName] > 1 ? varCounts[f.varName] : '';
+        const placeholder = `{{${f.varName}${suffix}}}`;
+        result = result.split(f.value).join(placeholder);
+    });
+    return result;
+}
+
+// ==========================================
+// 共有プレビュー＆変数化サジェストモーダル
+// ==========================================
+function openShareReviewModal(memo) {
+    const plainText = memo.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    const findings = detectSensitiveInfo(plainText);
+
+    // 確実に検出できるもの（自動変換）と、あいまいなもの（タップで変換）を分ける
+    const autoTypes = ['メールアドレス', '電話番号', 'URL'];
+    const autoFindings = findings.filter(f => autoTypes.includes(f.type));
+    const tapFindings = findings.filter(f => !autoTypes.includes(f.type));
+
+    const modal = document.createElement('div');
+    modal.className = 'share-review-modal';
+    modal.innerHTML = `
+        <div class="share-review-box">
+            <div class="share-review-header">
+                <h3 id="shareReviewHeading">⚡ シェアの準備</h3>
+                <button class="share-review-close"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            ${findings.length > 0 ? `
+                <div class="share-review-alert">
+                    <span class="material-symbols-rounded">auto_awesome</span>
+                    <div>
+                        <strong id="shareReviewAlertText">あなたのメモをテンプレートに変えています…</strong>
+                        <p>下線の単語をタップすると <code>{{変数}}</code> に変わります。受け取った人がそのまま穴埋めして使えます。</p>
+                    </div>
+                </div>
+            ` : `
+                <div class="share-review-safe">
+                    <span class="material-symbols-rounded">check_circle</span>
+                    個人情報らしき記述は見つかりませんでした
+                </div>
+            `}
+            <div class="share-review-preview-label">タップして編集できます</div>
+            <div class="share-review-live-text" id="shareReviewLiveText"></div>
+            <div class="share-review-actions">
+                <button class="share-review-cancel">キャンセル</button>
+                <button class="share-review-confirm"><span class="material-symbols-rounded">rocket_launch</span> この状態でシェアする</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    setTimeout(() => modal.classList.add('show'), 10);
+
+    const liveTextEl = modal.querySelector('#shareReviewLiveText');
+
+    // テキストを「自動変換済み」「タップ可能」「地の文」のセグメントに分解して描画
+    function buildSegments() {
+        // まず全findingsの出現位置を集める（自動変換分は既に確定、タップ分は未確定）
+        const allSpots = findings
+            .map(f => ({ ...f, index: plainText.indexOf(f.value), isAuto: autoTypes.includes(f.type) }))
+            .filter(f => f.index !== -1)
+            .sort((a, b) => a.index - b.index);
+
+        liveTextEl.innerHTML = '';
+        let cursor = 0;
+        const varCounts = {};
+
+        allSpots.forEach(spot => {
+            if (spot.index < cursor) return; // 重複領域はスキップ
+            // 地の文
+            if (spot.index > cursor) {
+                liveTextEl.appendChild(document.createTextNode(plainText.slice(cursor, spot.index)));
+            }
+            varCounts[spot.varName] = (varCounts[spot.varName] || 0) + 1;
+            const suffix = varCounts[spot.varName] > 1 ? varCounts[spot.varName] : '';
+            const varLabel = `{{${spot.varName}${suffix}}}`;
+
+            if (spot.isAuto) {
+                // 自動変換済み（黄色ブロック、確定表示）
+                const chip = document.createElement('span');
+                chip.className = 'sr-var-chip sr-anim-pop';
+                chip.textContent = varLabel;
+                chip.dataset.varLabel = varLabel;
+                liveTextEl.appendChild(chip);
+            } else {
+                // タップ可能（点線下線）
+                const tappable = document.createElement('span');
+                tappable.className = 'sr-tappable';
+                tappable.textContent = spot.value;
+                tappable.dataset.varLabel = varLabel;
+                tappable.addEventListener('click', () => {
+                    const chip = document.createElement('span');
+                    chip.className = 'sr-var-chip sr-anim-pop';
+                    chip.textContent = varLabel;
+                    chip.dataset.varLabel = varLabel;
+                    // クリックで戻せるように
+                    chip.addEventListener('click', () => {
+                        const back = document.createElement('span');
+                        back.className = 'sr-tappable';
+                        back.textContent = spot.value;
+                        back.dataset.varLabel = varLabel;
+                        back.replaceWith2 = tappable;
+                        chip.replaceWith(back);
+                        rebindTappable(back, spot, varLabel);
+                    });
+                    tappable.replaceWith(chip);
+                });
+                liveTextEl.appendChild(tappable);
+            }
+            cursor = spot.index + spot.value.length;
+        });
+        if (cursor < plainText.length) {
+            liveTextEl.appendChild(document.createTextNode(plainText.slice(cursor)));
+        }
+    }
+
+    function rebindTappable(el, spot, varLabel) {
+        el.addEventListener('click', () => {
+            const chip = document.createElement('span');
+            chip.className = 'sr-var-chip sr-anim-pop';
+            chip.textContent = varLabel;
+            chip.dataset.varLabel = varLabel;
+            chip.addEventListener('click', () => {
+                const back = document.createElement('span');
+                back.className = 'sr-tappable';
+                back.textContent = spot.value;
+                back.dataset.varLabel = varLabel;
+                chip.replaceWith(back);
+                rebindTappable(back, spot, varLabel);
+            });
+            el.replaceWith(chip);
+        });
+    }
+
+    buildSegments();
+
+    // 自動検出があれば「褒める」演出
+    if (autoFindings.length > 0) {
+        const alertText = modal.querySelector('#shareReviewAlertText');
+        setTimeout(() => {
+            if (alertText) alertText.textContent = `✨ ${autoFindings.length}件、自動で {{変数}} に変換しました！`;
+        }, 500);
+    } else if (findings.length > 0) {
+        const alertText = modal.querySelector('#shareReviewAlertText');
+        if (alertText) alertText.textContent = `点線の単語をタップして変数に変えましょう`;
+    }
+
+    function getFinalText() {
+        let result = '';
+        liveTextEl.childNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) result += node.textContent;
+            else if (node.classList?.contains('sr-var-chip')) result += node.dataset.varLabel;
+            else if (node.classList?.contains('sr-tappable')) result += node.textContent;
+        });
+        return result;
+    }
+
+    function closeModal() { modal.classList.remove('show'); setTimeout(() => modal.remove(), 250); }
+    modal.querySelector('.share-review-close').addEventListener('click', closeModal);
+    modal.querySelector('.share-review-cancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+    modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
+        const finalText = getFinalText();
+        closeModal();
+        await doSharePrompt(memo, finalText);
+    });
+}
+
+async function sharePrompt(memo) {
+    openShareReviewModal(memo);
+}
+
+async function doSharePrompt(memo, overrideContent) {
+    try {
+        if(!currentUser) { showToast('ログインが必要です', 'error'); return; }
+        const shareData = {
+            title: memo.title || '無題',
+            content: overrideContent || memo.content || '',
+            sharedAt: new Date().toISOString(),
+            sharedBy: currentUser.displayName || 'memoppaユーザー',
+            uid: currentUser.uid,
+            importCount: 0,
+            useCount: 0,
+        };
+        // ユーザーのサブコレクションに保存（権限エラー回避）
+        const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);
+        // 共有IDはuid_docIdの形式
+        const shareToken = `${currentUser.uid}_${ref.id}`;
+        const url = `${location.origin}/?share=${btoa(shareToken)}`;
+        await navigator.clipboard.writeText(url);
+        showToast('共有URLをコピーしました', 'share');
+        // 元のメモに共有参照を保存（統計表示のため）
+        memo.sharedRef = ref.id;
+        cloudSaveMemo(memo);
+        renderMemoList();
+        return url;
+    } catch(e) {
+        console.error('share error:', e);
+        showToast('共有URLの生成に失敗しました: ' + e.message, 'error');
+    }
+}
+
+// 共有URLからプロンプトをインポート
+async function importSharedPrompt(shareId) {
+    try {
+        // base64デコードしてuid_docIdを取得（uidは28文字固定のFirebase UID）
+        let uid, docId;
+        try {
+            const decoded = atob(shareId);
+            const idx = decoded.indexOf('_');
+            uid = decoded.slice(0, idx);
+            docId = decoded.slice(idx + 1);
+        } catch(e) {
+            docId = shareId; uid = null;
+        }
+        const ref = uid
+            ? doc(db, 'users', uid, 'sharedPrompts', docId)
+            : doc(db, 'sharedPrompts', shareId);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) { showToast('共有リンクが見つかりません', 'error'); return; }
+        const data = snap.data();
+        const newMemo = {
+            id: `memo_${Date.now()}`,
+            title: `${data.title}（共有）`,
+            content: data.content,
+            isPrompt: true, useCount: 0,
+            archived: false, isPinned: false, isPrivate: false, isTrashed: false,
+            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        };
+        memos.unshift(newMemo); cloudSaveMemo(newMemo); renderMemoList(); selectMemo(newMemo.id);
+        showToast(`「${data.title}」をインポートしました`, 'download');
+        // インポート数カウンターを増やす（共有者への還元）
+        try { await updateDoc(ref, { importCount: increment(1) }); } catch(e) {}
+    } catch(e) {
+        console.error('import error:', e);
+        showToast('インポートに失敗しました', 'error');
+    }
+}
 async function cloudDeleteMemo(memoId) { if (!currentUser) return; await deleteDoc(doc(db, "users", currentUser.uid, "memos", memoId)); }
 
 let onboardingChecked = false;
@@ -1208,24 +2219,188 @@ function loadUserSettings() {
         }
         if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.theme) currentTheme = data.theme; if (data.fontFamily) currentFontFamily = data.fontFamily; if (data.fontSize) currentFontSize = data.fontSize;
+            if (data.theme) currentTheme = data.theme;
+            // PC/スマホ別フォント設定（後方互換：古いfontFamily/fontSizeも読む）
+            fontFamilyPc = data.fontFamilyPc || data.fontFamily || 'system';
+            fontSizePc = data.fontSizePc || data.fontSize || '16px';
+            fontFamilyMobile = data.fontFamilyMobile || data.fontFamily || 'system';
+            fontSizeMobile = data.fontSizeMobile || '15px';
+            currentFontFamily = isMobileDevice() ? fontFamilyMobile : fontFamilyPc;
+            currentFontSize = isMobileDevice() ? fontSizeMobile : fontSizePc;
             if (data.targetEmail) { targetEmail = data.targetEmail; if(targetEmailInput) targetEmailInput.value = targetEmail; }
             if (typeof data.defaultAi === 'string') { defaultAi = data.defaultAi; const sel = document.getElementById('defaultAiSelect'); if(sel) sel.value = defaultAi; }
             if (data.isSidebarPinned && pinSidebarBtn) { isSidebarPinned = data.isSidebarPinned; document.body.classList.toggle('sidebar-pinned', isSidebarPinned); pinSidebarBtn.classList.toggle('active', isSidebarPinned); }
+            if (data.editorWide) { document.body.classList.add('editor-narrow'); } else { document.body.classList.remove('editor-narrow'); }
             applySettings();
         }
     });
 }
 function saveUserSettings(updates) { if (currentUser) setDoc(doc(db, "users", currentUser.uid, "settings", "preferences"), updates, { merge: true }); }
-function saveAndApplySettings() { saveUserSettings({ theme: currentTheme, fontFamily: currentFontFamily, fontSize: currentFontSize }); applySettings(); }
+function updateFontPreview() {
+    const activeTab = document.querySelector('.font-device-tab.active')?.dataset.device || 'pc';
+    const fam = activeTab === 'mobile' ? fontFamilyMobile : fontFamilyPc;
+    const size = activeTab === 'mobile' ? fontSizeMobile : fontSizePc;
+    const fontMap = {
+        'system':    "-apple-system, BlinkMacSystemFont, '游ゴシック体', 'Yu Gothic', 'Segoe UI', sans-serif",
+        'noto-sans': "'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif",
+        'biz-ud':    "'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', sans-serif",
+        'serif':     "'Hiragino Mincho ProN', 'Yu Mincho', Georgia, serif",
+        'monospace': "'SFMono-Regular', 'Consolas', 'Courier New', monospace",
+    };
+    const preview = document.getElementById('fontPreview');
+    if(preview) { preview.style.fontFamily = fontMap[fam] || fontMap['system']; preview.style.fontSize = size; }
+}
+
+function saveAndApplySettings() {
+    saveUserSettings({ theme: currentTheme, fontFamilyPc, fontSizePc, fontFamilyMobile, fontSizeMobile });
+    applySettings();
+}
 function applySettings() {
     document.body.setAttribute('data-theme', currentTheme);
-    let fontStr = currentFontFamily === 'noto-sans' ? "'Noto Sans JP', sans-serif" : "-apple-system, BlinkMacSystemFont, sans-serif"; 
-    if(memoContent) memoContent.style.fontFamily = fontStr; if(memoTitle) memoTitle.style.fontFamily = fontStr; if(memoContent) memoContent.style.fontSize = currentFontSize;
+    const fontMap = {
+        'system':    "-apple-system, BlinkMacSystemFont, '游ゴシック体', 'Yu Gothic', 'Segoe UI', sans-serif",
+        'noto-sans': "'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif",
+        'biz-ud':    "'BIZ UDPGothic', 'Hiragino Kaku Gothic ProN', sans-serif",
+        'serif':     "'Hiragino Mincho ProN', 'Yu Mincho', Georgia, serif",
+        'monospace': "'SFMono-Regular', 'Consolas', 'Courier New', monospace",
+    };
+    // 現在の端末に応じたフォントを適用
+    const isMobile = isMobileDevice();
+    const activeFontFamily = isMobile ? fontFamilyMobile : fontFamilyPc;
+    const activeFontSize = isMobile ? fontSizeMobile : fontSizePc;
+    const fontStr = fontMap[activeFontFamily] || fontMap['system'];
+    document.body.style.fontFamily = fontStr;
+    if(memoContent) memoContent.style.fontSize = activeFontSize;
+    updateFontPreview();
+    // ボタンのactive状態を更新
+    if(themeLightBtn) themeLightBtn.classList.toggle('active', currentTheme === 'light');
+    if(themeDarkBtn) themeDarkBtn.classList.toggle('active', currentTheme === 'dark');
+    document.querySelectorAll('.font-size-btn-pc').forEach(btn => btn.classList.toggle('active', btn.dataset.size === fontSizePc));
+    document.querySelectorAll('.font-size-btn-mobile').forEach(btn => btn.classList.toggle('active', btn.dataset.size === fontSizeMobile));
+    const fontFamilySelectPcEl = document.getElementById('fontFamilySelectPc');
+    const fontFamilySelectMobileEl = document.getElementById('fontFamilySelectMobile');
+    if(fontFamilySelectPcEl) fontFamilySelectPcEl.value = fontFamilyPc;
+    if(fontFamilySelectMobileEl) fontFamilySelectMobileEl.value = fontFamilyMobile;
+    const isNarrow = document.body.classList.contains('editor-narrow');
+    const editorWideBtn = document.getElementById('editorWidthWideBtn');
+    const editorNormalBtn = document.getElementById('editorWidthStandardBtn');
+    if(editorWideBtn) editorWideBtn.classList.toggle('active', isNarrow);
+    if(editorNormalBtn) editorNormalBtn.classList.toggle('active', !isNarrow);
+    const qpOpen = localStorage.getItem('memoppaQpBarOpen') === '1';
+    const qpWrap = document.getElementById('quickPromptBarWrap');
+    if(qpWrap) qpWrap.classList.toggle('hidden', !qpOpen);
 }
+function getRarity(count) {
+    if (count >= 30) return { level: 'gold',   label: '🥇 GOLD',   class: 'rarity-gold' };
+    if (count >= 10) return { level: 'silver', label: '🥈 SILVER', class: 'rarity-silver' };
+    if (count >= 3)  return { level: 'bronze', label: '🥉 BRONZE', class: 'rarity-bronze' };
+    return { level: 'normal', label: '', class: 'rarity-normal' };
+}
+
+function renderPromptHub(query = '') {
+    const list = document.getElementById('promptHubList');
+    if(!list) return;
+    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
+        .filter(m => !query || (m.title||'').toLowerCase().includes(query) || m.content.replace(/<[^>]*>/g,'').toLowerCase().includes(query))
+        .sort((a, b) => (b.useCount||0) - (a.useCount||0));
+    if(prompts.length === 0) {
+        list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
+        return;
+    }
+    list.innerHTML = '';
+    prompts.forEach(m => {
+        const tags = extractTags(m.content);
+        const preview = m.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0, 80);
+        const totalCount = (m.useCount||0);
+        const rarity = getRarity(totalCount);
+        const card = document.createElement('div');
+        card.className = `prompt-hub-card ${rarity.class}`;
+        card.innerHTML = `
+            <div class="phc-card-head">
+                <span class="material-symbols-rounded phc-bolt">bolt</span>
+                ${rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : ''}
+            </div>
+            <div class="phc-left" data-id="${m.id}">
+                <div class="phc-title">${escapeHtml(m.title||'無題')}</div>
+                <div class="phc-preview">${escapeHtml(preview)}</div>
+                ${tags.length ? `<div class="phc-tags">${tags.map(t=>`<span class="phc-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+                <div class="phc-meta-row">
+                    ${m.useCount ? `<span class="phc-count">${m.useCount}回使用</span>` : '<span class="phc-count phc-count-zero">未使用</span>'}
+                    ${m.sharedRef ? `<span class="phc-share-stats" id="shareStats_${m.id}"><span class="material-symbols-rounded">group</span>...</span>` : ''}
+                </div>
+            </div>
+            <div class="phc-actions">
+                <button class="phc-copy-btn" data-id="${m.id}" title="コピー"><span class="material-symbols-rounded">content_copy</span> コピー</button>
+                <button class="phc-share-btn" data-id="${m.id}" title="共有URLを生成"><span class="material-symbols-rounded">share</span></button>
+                <button class="phc-edit-btn" data-id="${m.id}" title="編集"><span class="material-symbols-rounded">edit</span></button>
+            </div>`;
+        // 共有ボタン
+        card.querySelector('.phc-share-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            sharePrompt(m);
+        });
+        // コピーボタン
+        card.querySelector('.phc-copy-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const copyBtn = e.currentTarget;
+            const hasVars = /\{\{[^}]+\}\}/.test(m.content);
+            if(hasVars) { copyPromptWithVars(m); return; }
+            const text = m.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+            navigator.clipboard.writeText(text).then(() => {
+                copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピー済';
+                copyBtn.classList.add('copied');
+                setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピー'; copyBtn.classList.remove('copied'); }, 1800);
+                m.useCount = (m.useCount||0) + 1; cloudSaveMemo(m);
+                // 共有元へuseCountを還流（キラカード育成）
+                if(m.sharedRef) {
+                    try {
+                        const parts = m.sharedRef.split('/');
+                        const refUid = parts[0]; const refDocId = parts[1] || parts[0];
+                        const sharedRef = doc(db, 'users', refUid || currentUser?.uid, 'sharedPrompts', refDocId);
+                        updateDoc(sharedRef, { useCount: increment(1) }).catch(() => {});
+                    } catch(e) {}
+                }
+                showToast('コピーしました', 'content_copy');
+                const aiUrl = getAiUrl(m.content);
+                if(aiUrl) window.open(aiUrl, '_blank');
+            });
+        });
+        // 編集ボタン
+        card.querySelector('.phc-edit-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            setFilter('all');
+            selectMemo(m.id);
+        });
+        // カード左クリックで編集
+        card.querySelector('.phc-left').addEventListener('click', () => { setFilter('all'); selectMemo(m.id); });
+        list.appendChild(card);
+        // 共有統計を非同期取得
+        if (m.sharedRef) {
+            (async () => {
+                try {
+                    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'sharedPrompts', m.sharedRef));
+                    const statsEl = document.getElementById(`shareStats_${m.id}`);
+                    if (snap.exists() && statsEl) {
+                        const data = snap.data();
+                        const importCount = data.importCount || 0;
+                        statsEl.innerHTML = importCount > 0
+                            ? `<span class="material-symbols-rounded">group</span>${importCount}人にインポートされました`
+                            : `<span class="material-symbols-rounded">share</span>共有中`;
+                    }
+                } catch(e) {}
+            })();
+        }
+    });
+}
+
+function getAiUrl(content) {
+    const ai = detectAiTag(content) || defaultAi;
+    return ai && AI_DESTINATIONS[ai] ? AI_DESTINATIONS[ai].url : null;
+}
+
 function updateMaskButtonIcon() { if(maskToggleButton) maskToggleButton.innerHTML = isMasked ? `🙈` : `<span class="material-symbols-rounded">visibility</span>`; maskToggleButton.classList.toggle('active', isMasked); }
 function focusMemoContent() { if(memoContent) setTimeout(() => { memoContent.focus(); updateCharCount(); }, 100); }
-function updateCharCount() { if(charCount && memoContent) { const text = memoContent.innerText || ''; charCount.textContent = `${text.replace(/[\n\r]/g, '').length} chars`; } }
+function updateCharCount() { if(charCount && memoContent) { const text = memoContent.innerText || ''; charCount.textContent = `${text.replace(/[\n\r]/g, '').length} 文字`; } }
 
 function setFilter(filter) {
     currentFilter = filter;
@@ -1233,6 +2408,20 @@ function setFilter(filter) {
     if(promptFilterBtn) promptFilterBtn.classList.toggle('active', filter === 'prompt');
     if(archiveBtn) archiveBtn.classList.toggle('active', filter === 'archive');
     if(trashBtn) trashBtn.classList.toggle('active', filter === 'trash');
+    // ･･メニューのアクティブ表示
+    const filterMoreBtn = document.getElementById('filterMoreBtn');
+    if(filterMoreBtn) filterMoreBtn.classList.toggle('active', filter === 'archive' || filter === 'trash');
+    // プロンプトハブビューの切り替え
+    const promptHubView = document.getElementById('promptHubView');
+    const editorContainer = document.getElementById('editorContainer');
+    if(filter === 'prompt') {
+        promptHubView?.classList.remove('hidden');
+        editorContainer?.classList.add('hidden');
+        renderPromptHub();
+    } else {
+        promptHubView?.classList.add('hidden');
+        editorContainer?.classList.remove('hidden');
+    }
     exitMultiSelect(); showMobileList(); renderMemoList();
 }
 
@@ -1264,11 +2453,25 @@ function getFilteredMemos() {
 function formatDate(isoString) {
     const d = new Date(isoString); const today = new Date();
     if (d.toDateString() === today.toDateString()) { return d.toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'}); }
-    return `${d.getMonth()+1}月${d.getDate()}日`;
+    const yy = String(d.getFullYear()).slice(2);
+    return `${yy}/${d.getMonth()+1}/${d.getDate()}`;
+}
+
+function updatePromptCountBadge() {
+    const badge = document.getElementById('promptCountBadge');
+    if(!badge) return;
+    const count = memos.filter(m => m.isPrompt && !m.isTrashed).length;
+    if(count === 0) {
+        badge.classList.add('hidden');
+    } else {
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+    }
 }
 
 function renderMemoList() {
     if(!memoList) return;
+    updatePromptCountBadge();
     renderQuickPromptBar();
     memoList.innerHTML = '';
     const filteredMemos = getFilteredMemos();
@@ -1298,11 +2501,8 @@ function renderMemoList() {
         const tags = extractTags(memo.content);
         let tagsHtml = '';
         if (tags.length > 0 && !memo.isPrivate) {
-            const displayTags = tags.slice(0, 3);
-            const extraCount = tags.length - 3;
-            const chipsHtml = displayTags.map(t => `<span class="list-tag-chip">#${escapeHtml(t)}</span>`).join('');
-            const moreHtml = extraCount > 0 ? `<span class="list-tag-more">+${extraCount}</span>` : '';
-            tagsHtml = `<div class="list-tags-container">${chipsHtml}${moreHtml}</div>`;
+            const chipsHtml = tags.map(t => `<span class="list-tag-chip">#${escapeHtml(t)}</span>`).join('');
+            tagsHtml = `<div class="list-tags-container">${chipsHtml}</div>`;
         }
 
         const isTrashed = memo.isTrashed;
@@ -1315,11 +2515,12 @@ function renderMemoList() {
         let actionHtml;
         if (isTrashed) {
             const daysLeft = Math.max(0, 10 - Math.floor((Date.now() - new Date(memo.trashedAt || memo.updatedAt).getTime()) / 86400000));
+            const dayLabel = daysLeft === 0 ? '今日削除' : `${daysLeft}d`;
             actionHtml = `
-            <div class="list-actions trash-actions">
-                <span class="trash-countdown" title="ゴミ箱のメモは自動的に完全削除されます">あと${daysLeft}日で自動削除</span>
+            <div class="list-actions trash-actions" style="flex-wrap:wrap;gap:6px;margin-top:4px;">
+                <span class="trash-countdown"><span class="material-symbols-rounded">schedule</span>${dayLabel}</span>
                 <button class="list-action-btn labeled-btn restore-btn" data-id="${memo.id}"><span class="material-symbols-rounded">restore_from_trash</span>復元</button>
-                <button class="list-action-btn labeled-btn danger delete-forever-btn" data-id="${memo.id}"><span class="material-symbols-rounded">delete_forever</span>完全に削除</button>
+                <button class="list-action-btn labeled-btn danger delete-forever-btn" data-id="${memo.id}"><span class="material-symbols-rounded">delete_forever</span>削除</button>
             </div>`;
         } else if (currentFilter === 'archive' && memo.archived) {
             actionHtml = `
