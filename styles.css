@@ -716,6 +716,18 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 @media (max-width: 768px) {
     .prompt-hub-back-btn { display: flex; }
 }
+/* タグアコーディオン */
+.phub-tag-accordion { border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+.phub-tag-toggle { width: 100%; display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: none; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); font-family: inherit; transition: background 0.15s; }
+.phub-tag-toggle:hover { background: var(--bg-hover); }
+.phub-tag-toggle .material-symbols-rounded { font-size: 16px; }
+.phub-tag-arrow { margin-left: auto; font-size: 18px !important; transition: transform 0.2s; }
+.phub-tag-panel { padding: 8px 16px 12px; }
+.phub-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.phub-tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 99px; background: var(--bg-hover); color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: 0.15s; font-family: inherit; }
+.phub-tag-chip:hover { border-color: var(--accent-color); color: var(--accent-color); }
+.phub-tag-chip.active { border-color: var(--accent-color); background: var(--accent-color); color: white; }
+.phub-tag-cnt { font-size: 10px; opacity: 0.7; }
 .prompt-hub-view { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .prompt-hub-view.hidden { display: none; }
 .prompt-hub-header { padding: 16px 24px 12px; border-bottom: 0.5px solid var(--border-color); flex-shrink: 0; display: flex; align-items: center; gap: 16px; }
@@ -833,7 +845,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 
 /* ========== キラカード レアリティ ========== */
 /* POPOPO体験：タップ変数化モーダル */
-.share-review-live-text { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; font-size: 14px; color: #374151; line-height: 2; min-height: 120px; max-height: 220px; overflow-y: auto; margin-bottom: 18px; word-break: break-word; }
+.share-review-live-text { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; font-size: 14px; color: #374151; line-height: 2; min-height: 120px; max-height: 220px; overflow-y: auto; margin-bottom: 18px; word-break: break-word; white-space: pre-wrap; }
 .sr-var-chip { display: inline-block; background: #fbbf24; color: #1e1b4b; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; font-family: monospace; cursor: pointer; margin: 0 2px; vertical-align: baseline; }
 .sr-var-chip:hover { filter: brightness(1.05); }
 .sr-tappable { border-bottom: 2px dashed #f59e0b; cursor: pointer; padding: 1px 2px; transition: background 0.15s; }

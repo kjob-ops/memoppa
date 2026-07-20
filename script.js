@@ -1044,6 +1044,40 @@ function setupEventListeners() {
     // プロンプトハブ内検索
     const promptHubSearch = document.getElementById('promptHubSearch');
     if(promptHubSearch) promptHubSearch.addEventListener('input', (e) => renderPromptHub(e.target.value.toLowerCase()));
+
+    // タグアコーディオン
+    let promptHubActiveTag = null;
+    const promptHubTagToggle = document.getElementById('promptHubTagToggle');
+    const promptHubTagPanel = document.getElementById('promptHubTagPanel');
+    const promptHubTagToggleArrow = document.getElementById('promptHubTagToggleArrow');
+    if(promptHubTagToggle && promptHubTagPanel) {
+        promptHubTagToggle.addEventListener('click', () => {
+            const isOpen = !promptHubTagPanel.classList.contains('hidden');
+            promptHubTagPanel.classList.toggle('hidden', isOpen);
+            if(promptHubTagToggleArrow) promptHubTagToggleArrow.textContent = isOpen ? 'expand_more' : 'expand_less';
+            if(!isOpen) renderPromptHubTags();
+        });
+    }
+    window.selectPromptHubTag = function(tag) {
+        promptHubActiveTag = (promptHubActiveTag === tag) ? null : tag;
+        renderPromptHubTags();
+        const query = promptHubSearch ? promptHubSearch.value.toLowerCase() : '';
+        renderPromptHub(query, promptHubActiveTag);
+    };
+    function renderPromptHubTags() {
+        const tagList = document.getElementById('promptHubTagList');
+        if(!tagList) return;
+        const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate);
+        const tagCount = {};
+        prompts.forEach(m => extractTags(m.content).forEach(t => { tagCount[t] = (tagCount[t]||0)+1; }));
+        const tags = Object.entries(tagCount).sort((a,b) => b[1]-a[1]);
+        if(tags.length === 0) { tagList.innerHTML = '<span style="color:var(--text-secondary);font-size:12px;">タグがありません</span>'; return; }
+        tagList.innerHTML = tags.map(([tag, cnt]) =>
+            `<button class="phub-tag-chip ${promptHubActiveTag===tag?'active':''}" onclick="selectPromptHubTag('${tag.replace(/'/g,"\\'")}')">
+                ${tag}<span class="phub-tag-cnt">${cnt}</span>
+            </button>`
+        ).join('');
+    }
     
     if(searchInput) searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !e.target.value); updateSidebarTags(); renderMemoList(); renderSearchMode(); });
     if(searchClearBtn) searchClearBtn.addEventListener('click', () => { currentSearch = ''; if(searchInput) { searchInput.value = ''; searchInput.focus(); } searchClearBtn.classList.add('hidden'); updateSidebarTags(); renderMemoList(); renderSearchMode(); });
@@ -2121,7 +2155,16 @@ function applyVarSubstitution(text, selectedFindings) {
 // 共有プレビュー＆変数化サジェストモーダル
 // ==========================================
 function openShareReviewModal(memo) {
-    const plainText = memo.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    // <br>や<p>タグを改行に変換してから他のタグを除去（改行を保持）
+    const plainText = memo.content
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+        .replace(/\n{3,}/g, '\n\n')  // 3行以上の連続改行は2行に
+        .trim();
     const findings = detectSensitiveInfo(plainText);
 
     // 確実に検出できるもの（自動変換）と、あいまいなもの（タップで変換）を分ける
@@ -2453,11 +2496,12 @@ function getRarity(count) {
     return { level: 'normal', label: '', class: 'rarity-normal' };
 }
 
-function renderPromptHub(query = '') {
+function renderPromptHub(query = '', activeTag = null) {
     const list = document.getElementById('promptHubList');
     if(!list) return;
     const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
         .filter(m => !query || (m.title||'').toLowerCase().includes(query) || m.content.replace(/<[^>]*>/g,'').toLowerCase().includes(query))
+        .filter(m => !activeTag || extractTags(m.content).includes(activeTag))
         .sort((a, b) => (b.useCount||0) - (a.useCount||0));
     if(prompts.length === 0) {
         list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
