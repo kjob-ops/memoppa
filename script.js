@@ -959,7 +959,11 @@ function setupEventListeners() {
             else { mobileActionMenu.style.display = 'none'; mobileActionMenu.classList.add('hidden'); }
             const current = memos.find(m => m.id === currentMemoId);
             if (current) {
-                if(actionPinBtn) actionPinBtn.innerHTML = current.isPinned ? `<span class="material-symbols-rounded">push_pin</span> Unpin Note` : `<span class="material-symbols-rounded">push_pin</span> Pin Note`;
+                if(actionPinBtn) actionPinBtn.innerHTML = `<span class="material-symbols-rounded">push_pin</span> <span id="actionPinLabel">${current.isPinned ? 'ピンを外す' : 'ピン留め'}</span>`;
+                if(actionPrivateBtn) {
+                    const privLabel = document.getElementById('actionPrivateLabel');
+                    if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
+                }
                 if(actionPrivateBtn) actionPrivateBtn.innerHTML = current.isPrivate ? `<span class="material-symbols-rounded">visibility</span> Make Public` : `<span class="material-symbols-rounded">visibility_off</span> Make Private`;
                 if(actionDeleteBtn) actionDeleteBtn.innerHTML = current.isTrashed ? `<span class="material-symbols-rounded">restore_from_trash</span> Restore / Delete` : `<span class="material-symbols-rounded">delete</span> Delete Note`;
             }
@@ -971,6 +975,18 @@ function setupEventListeners() {
     const actionPromptBtn = document.getElementById('actionPromptBtn');
     if(actionPromptBtn) actionPromptBtn.addEventListener('click', () => { togglePromptFlag(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
     if(actionPrivateBtn) actionPrivateBtn.addEventListener('click', () => { togglePrivate(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
+    const actionShareBtn2 = document.getElementById('actionShareBtn2');
+    const actionMailBtn2 = document.getElementById('actionMailBtn2');
+    if(actionShareBtn2) actionShareBtn2.addEventListener('click', () => {
+        if(mobileActionMenu) mobileActionMenu.style.display = 'none';
+        const m = memos.find(x => x.id === currentMemoId);
+        if(m) sharePrompt(m);
+    });
+    if(actionMailBtn2) actionMailBtn2.addEventListener('click', () => {
+        if(mobileActionMenu) mobileActionMenu.style.display = 'none';
+        const m = memos.find(x => x.id === currentMemoId);
+        if(m) { const body = encodeURIComponent(m.content || ''); const subj = encodeURIComponent(m.title || 'memoppaメモ'); window.open(`mailto:?subject=${subj}&body=${body}`); }
+    });
     if(actionDeleteBtn) actionDeleteBtn.addEventListener('click', () => { directDelete(currentMemoId); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
 
     if(shareLinkBtn) {
@@ -1471,7 +1487,32 @@ function updateCurrentMemo() {
     }
 }
 
-function togglePin() { const m = memos.find(x => x.id === currentMemoId); if(m && !m.isTrashed){ m.isPinned = !m.isPinned; m.updatedAt = new Date().toISOString(); cloudSaveMemo(m); renderMemoList(); updateMainActionButtons(m); } }
+function togglePin() {
+    const m = memos.find(x => x.id === currentMemoId);
+    if(m && !m.isTrashed) {
+        const wasPinned = m.isPinned;
+        m.isPinned = !m.isPinned;
+        m.updatedAt = new Date().toISOString();
+        cloudSaveMemo(m);
+        renderMemoList();
+        updateMainActionButtons(m);
+        // アクションメニューのラベルも更新
+        const pinLabel = document.getElementById('actionPinLabel');
+        if(pinLabel) pinLabel.textContent = m.isPinned ? 'ピンを外す' : 'ピン留め';
+        // Undoトースト
+        showToastWithUndo(
+            m.isPinned ? 'ピン留めしました' : 'ピンを外しました',
+            () => {
+                m.isPinned = wasPinned;
+                m.updatedAt = new Date().toISOString();
+                cloudSaveMemo(m);
+                renderMemoList();
+                updateMainActionButtons(m);
+                if(pinLabel) pinLabel.textContent = m.isPinned ? 'ピンを外す' : 'ピン留め';
+            }
+        );
+    }
+}
 
 // ==========================================
 // プロンプト庫
@@ -2112,6 +2153,16 @@ function openShareReviewModal(memo) {
             `}
             <div class="share-review-preview-label">タップして編集できます</div>
             <div class="share-review-live-text" id="shareReviewLiveText"></div>
+            <div class="share-review-remix-row">
+                <label class="share-review-remix-label">
+                    <input type="checkbox" id="shareRemixAllowed" checked>
+                    <span class="share-review-remix-text">
+                        <span class="material-symbols-rounded">edit</span>
+                        改変・再利用を許可する
+                    </span>
+                </label>
+                <p class="share-review-remix-hint">オフにすると受け取った人に「改変禁止」と表示されます</p>
+            </div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">rocket_launch</span> この状態でシェアする</button>
@@ -2230,8 +2281,9 @@ function openShareReviewModal(memo) {
     modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
         const finalText = getFinalText();
+        const allowRemix = modal.querySelector('#shareRemixAllowed')?.checked !== false;
         closeModal();
-        await doSharePrompt(memo, finalText);
+        await doSharePrompt(memo, finalText, allowRemix);
     });
 }
 
@@ -2239,7 +2291,7 @@ async function sharePrompt(memo) {
     openShareReviewModal(memo);
 }
 
-async function doSharePrompt(memo, overrideContent) {
+async function doSharePrompt(memo, overrideContent, allowRemix = true) {
     try {
         if(!currentUser) { showToast('ログインが必要です', 'error'); return; }
         const shareData = {
@@ -2250,6 +2302,7 @@ async function doSharePrompt(memo, overrideContent) {
             uid: currentUser.uid,
             importCount: 0,
             useCount: 0,
+            allowRemix: allowRemix,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
         const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);

@@ -817,6 +817,12 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-review-preview-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .share-review-preview { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; font-size: 12.5px; color: #374151; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular','Consolas',monospace; white-space: pre-wrap; word-break: break-word; }
 .share-review-actions { display: flex; gap: 10px; }
+.share-review-remix-row { margin: 12px 0 8px; padding: 10px 12px; background: var(--bg-hover); border-radius: var(--radius-md); }
+.share-review-remix-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.share-review-remix-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-color); cursor: pointer; flex-shrink: 0; }
+.share-review-remix-text { display: flex; align-items: center; gap: 5px; }
+.share-review-remix-text .material-symbols-rounded { font-size: 16px; color: var(--accent-color); }
+.share-review-remix-hint { font-size: 11px; color: var(--text-secondary); margin: 4px 0 0 24px; }
 .share-review-cancel { flex: 1; padding: 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-hover); color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-color); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
 .share-review-confirm:hover { filter: brightness(1.08); }
@@ -882,5 +888,5 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 
 /* スマホは1列 */
 @media (max-width: 768px) {
-    .prompt-hub-list { grid-template-columns: 1fr; padding: 12px; }
+    .prompt-hub-list { grid-template-columns: 1fr; padding: 12px; padding-bottom: 80px; }
 }

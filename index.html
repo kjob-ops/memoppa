@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=22">
+    <link rel="stylesheet" href="styles.css?v=23">
 </head>
 <script>
   if ('serviceWorker' in navigator) {
@@ -269,10 +269,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
 
             <div id="mobileActionMenu" class="mobile-action-menu hidden mobile-only" style="display: none;">
-                <button id="actionPinBtn" class="menu-item"><span class="material-symbols-rounded">push_pin</span> Pin Note</button>
-                <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> Make Private</button>
+                <button id="actionPinBtn" class="menu-item"><span class="material-symbols-rounded">push_pin</span> <span id="actionPinLabel">ピン留め</span></button>
+                <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> <span id="actionPrivateLabel">非公開にする</span></button>
+                <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
+                <button id="actionMailBtn2" class="menu-item"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                 <div class="menu-divider"></div>
-                <button id="actionDeleteBtn" class="menu-item danger"><span class="material-symbols-rounded">delete</span> Delete Note</button>
+                <button id="actionDeleteBtn" class="menu-item danger"><span class="material-symbols-rounded">delete</span> 削除</button>
             </div>
 
             <div id="privateLockOverlay" class="private-lock-overlay hidden">
@@ -564,7 +566,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=22"></script>
+    <script src="app.bundle.js?v=23"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">
