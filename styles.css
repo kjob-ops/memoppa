@@ -884,4 +884,3 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 @media (max-width: 768px) {
     .prompt-hub-list { grid-template-columns: 1fr; padding: 12px; }
 }
-

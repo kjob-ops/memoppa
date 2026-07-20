@@ -2295,6 +2295,8 @@ async function importSharedPrompt(shareId) {
             isPrompt: true, useCount: 0,
             archived: false, isPinned: false, isPrivate: false, isTrashed: false,
             createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+            // 共有元への還流に使う（uid/docId形式で保存）
+            sharedRef: uid ? `${uid}/${docId}` : docId,
         };
         memos.unshift(newMemo); cloudSaveMemo(newMemo); renderMemoList(); selectMemo(newMemo.id);
         showToast(`「${data.title}」をインポートしました`, 'download');
@@ -2480,7 +2482,11 @@ function renderPromptHub(query = '') {
         if (m.sharedRef) {
             (async () => {
                 try {
-                    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'sharedPrompts', m.sharedRef));
+                    // sharedRefは「uid/docId」形式。共有元のuidでFirestoreを参照する
+                    const parts = m.sharedRef.split('/');
+                    const refUid = parts.length >= 2 ? parts[0] : currentUser.uid;
+                    const refDocId = parts.length >= 2 ? parts[1] : parts[0];
+                    const snap = await getDoc(doc(db, 'users', refUid, 'sharedPrompts', refDocId));
                     const statsEl = document.getElementById(`shareStats_${m.id}`);
                     if (snap.exists()) {
                         const data = snap.data();
