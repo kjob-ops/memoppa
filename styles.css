@@ -243,6 +243,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .prompt-var-row { margin-bottom: 12px; }
 .prompt-var-row label { display: block; font-size: 13px; font-weight: bold; color: var(--accent-color); margin-bottom: 4px; }
 .prompt-var-preview { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; max-height: 160px; overflow-y: auto; margin-bottom: 16px; line-height: 1.6; }
+.copy-fallback-textarea { width: 100%; min-height: 220px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12px; color: var(--text-primary); font-family: ui-monospace, "SF Mono", Menlo, monospace; line-height: 1.6; resize: vertical; box-sizing: border-box; }
 .prompt-var-copy { width: 100%; justify-content: center; background: var(--accent-color) !important; color: white !important; border-color: var(--accent-color) !important; font-weight: bold; }
 .prompt-empty-state { text-align: center; padding: 40px 24px; color: var(--text-secondary); }
 .prompt-empty-state .material-symbols-rounded { font-size: 40px; color: var(--accent-color); opacity: 0.5; margin-bottom: 8px; }
