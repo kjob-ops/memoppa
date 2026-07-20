@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=20">
+    <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <script>
   if ('serviceWorker' in navigator) {
@@ -197,6 +197,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <!-- プロンプトハブビュー（Promptフィルタ時） -->
             <div id="promptHubView" class="prompt-hub-view hidden">
                 <div class="prompt-hub-header">
+                    <button id="promptHubBackBtn" class="prompt-hub-back-btn mobile-only" title="戻る"><span class="material-symbols-rounded">arrow_back</span></button>
                     <div class="prompt-hub-title"><span class="material-symbols-rounded">bolt</span>プロンプト</div>
                     <div class="prompt-hub-search">
                         <span class="material-symbols-rounded" style="font-size:16px;color:var(--text-secondary)">search</span>
@@ -563,7 +564,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js"></script>
+    <script src="app.bundle.js?v=22"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

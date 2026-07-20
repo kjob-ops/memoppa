@@ -873,6 +873,8 @@ function setupEventListeners() {
     if(newMemoBtn) newMemoBtn.addEventListener('click', () => { createNewMemo(); if(!isSidebarPinned) toggleSidebar(true); });
     if(mobileNewMemoFab) mobileNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
+    const promptHubBackBtn = document.getElementById('promptHubBackBtn');
+    if(promptHubBackBtn) promptHubBackBtn.addEventListener('click', () => setFilter('all'));
 
     if(mainPinBtn) mainPinBtn.addEventListener('click', () => togglePin());
     const mainAttachBtn = document.getElementById('mainAttachBtn');
@@ -2526,11 +2528,15 @@ function setFilter(filter) {
         promptHubView?.classList.remove('hidden');
         editorContainer?.classList.add('hidden');
         renderPromptHub();
+        showMobileEditor(); // スマホでもmainContentを表示（promptHubViewはその中にある）
     } else {
         promptHubView?.classList.add('hidden');
         editorContainer?.classList.remove('hidden');
     }
-    exitMultiSelect(); showMobileList(); renderMemoList();
+    exitMultiSelect();
+    // promptフィルタ以外はスマホでサイドバーに戻す。promptはshowMobileEditorで対応済みなのでここではスキップ
+    if(filter !== 'prompt') showMobileList();
+    renderMemoList();
 }
 
 function getFilteredMemos() {
