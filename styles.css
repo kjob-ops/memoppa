@@ -860,26 +860,17 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .rarity-normal { border-color: var(--border-color); }
 
 /* ブロンズ（3〜9回） */
-.rarity-bronze { border-color: #d97706 !important; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important; }
-.rarity-bronze .phc-bolt { color: #b45309 !important; }
+.rarity-bronze { border-color: #d97706; }
 .rarity-bronze-badge { background: linear-gradient(90deg, #d97706, #b45309); color: white; }
 
 /* シルバー（10〜29回） */
-.rarity-silver { border-color: #94a3b8 !important; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important; box-shadow: 0 0 12px rgba(148,163,184,0.25) !important; }
-.rarity-silver .phc-bolt { color: #64748b !important; }
+.rarity-silver { border-color: #94a3b8; }
 .rarity-silver-badge { background: linear-gradient(90deg, #94a3b8, #64748b); color: white; }
 
 /* ゴールド（30回〜） */
 @keyframes gold-shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-.rarity-gold { border-color: #fbbf24 !important; background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%) !important; box-shadow: 0 0 20px rgba(251,191,36,0.3) !important; }
-.rarity-gold .phc-title { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: gold-shimmer 3s linear infinite; }
-.rarity-gold .phc-preview { color: #94a3b8 !important; }
-.rarity-gold .phc-count { color: #fbbf24 !important; opacity: 0.9; }
-.rarity-gold .phc-bolt { color: #fbbf24 !important; }
-.rarity-gold .phc-tag { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: #fde68a; }
-.rarity-gold .phc-actions { border-top-color: rgba(251,191,36,0.2); }
-.rarity-gold .phc-share-btn, .rarity-gold .phc-edit-btn { background: rgba(255,255,255,0.06); border-color: rgba(251,191,36,0.3); color: #fbbf24; }
-.rarity-gold-badge { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); background-size: 200%; color: #1e1b4b; animation: gold-shimmer 2.5s linear infinite; }
+.rarity-gold { border-color: #fbbf24; }
+.rarity-gold-badge { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); background-size: 200%; color: #78350f; animation: gold-shimmer 2.5s linear infinite; }
 
 /* スマホは1列 */
 @media (max-width: 768px) {

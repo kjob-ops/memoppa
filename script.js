@@ -2410,14 +2410,15 @@ function renderPromptHub(query = '') {
     prompts.forEach(m => {
         const tags = extractTags(m.content);
         const preview = m.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0, 80);
-        const totalCount = (m.useCount||0);
-        const rarity = getRarity(totalCount);
+        // レアリティは「自分がコピーした回数」ではなく、共有経由で他者に使われた回数（インポート数＋インポート先での使用数）で判定する。
+        // 未共有のプロンプトは常にノーマル表示。共有済みなら統計を非同期取得してから確定する。
+        const rarity = getRarity(0);
         const card = document.createElement('div');
         card.className = `prompt-hub-card ${rarity.class}`;
         card.innerHTML = `
             <div class="phc-card-head">
                 <span class="material-symbols-rounded phc-bolt">bolt</span>
-                ${rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : ''}
+                <span id="rarityBadge_${m.id}"></span>
             </div>
             <div class="phc-left" data-id="${m.id}">
                 <div class="phc-title">${escapeHtml(m.title||'無題')}</div>
@@ -2473,18 +2474,26 @@ function renderPromptHub(query = '') {
         // カード左クリックで編集
         card.querySelector('.phc-left').addEventListener('click', () => { setFilter('all'); selectMemo(m.id); });
         list.appendChild(card);
-        // 共有統計を非同期取得
+        // 共有統計を非同期取得（インポート数＋インポート先での使用数 → レアリティに反映）
         if (m.sharedRef) {
             (async () => {
                 try {
                     const snap = await getDoc(doc(db, 'users', currentUser.uid, 'sharedPrompts', m.sharedRef));
                     const statsEl = document.getElementById(`shareStats_${m.id}`);
-                    if (snap.exists() && statsEl) {
+                    if (snap.exists()) {
                         const data = snap.data();
                         const importCount = data.importCount || 0;
-                        statsEl.innerHTML = importCount > 0
-                            ? `<span class="material-symbols-rounded">group</span>${importCount}人にインポートされました`
-                            : `<span class="material-symbols-rounded">share</span>共有中`;
+                        const externalUseCount = data.useCount || 0;
+                        if (statsEl) {
+                            statsEl.innerHTML = importCount > 0
+                                ? `<span class="material-symbols-rounded">group</span>${importCount}人にインポートされました`
+                                : `<span class="material-symbols-rounded">share</span>共有中`;
+                        }
+                        const rarity = getRarity(importCount + externalUseCount);
+                        card.classList.remove('rarity-normal', 'rarity-bronze', 'rarity-silver', 'rarity-gold');
+                        card.classList.add(rarity.class);
+                        const badgeEl = document.getElementById(`rarityBadge_${m.id}`);
+                        if (badgeEl) badgeEl.innerHTML = rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : '';
                     }
                 } catch(e) {}
             })();
