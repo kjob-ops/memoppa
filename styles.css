@@ -713,6 +713,15 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .prompt-hub-view { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .prompt-hub-view.hidden { display: none; }
 .prompt-hub-header { padding: 16px 24px 12px; border-bottom: 0.5px solid var(--border-color); flex-shrink: 0; display: flex; align-items: center; gap: 16px; }
+/* スマホ専用 promptHub トップバー */
+.prompt-hub-topbar { display: none; flex-shrink: 0; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 0.5px solid var(--border-color); background: var(--bg-primary); height: 54px; }
+.phb-back-btn { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: none; background: none; color: var(--text-primary); cursor: pointer; border-radius: 50%; transition: background 0.15s; }
+.phb-back-btn:active { background: var(--bg-hover); }
+.phb-back-btn .material-symbols-rounded { font-size: 22px; }
+.phb-search-wrap { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--bg-hover); border: 1px solid var(--border-color); border-radius: 99px; padding: 8px 14px; }
+.phb-search-icon { font-size: 16px; color: var(--text-secondary); flex-shrink: 0; }
+.phb-search-input { border: none; background: none; outline: none; font-size: 15px; color: var(--text-primary); width: 100%; font-family: inherit; }
+.phb-search-input::placeholder { color: var(--text-secondary); }
 .prompt-hub-title { font-size: 18px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .prompt-hub-title .material-symbols-rounded { color: var(--accent-color); font-size: 20px; }
 .prompt-hub-search { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--bg-hover); border: 0.5px solid var(--border-color); border-radius: var(--radius-md); padding: 8px 12px; }
@@ -900,4 +909,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 /* スマホは1列 */
 @media (max-width: 768px) {
     .prompt-hub-list { grid-template-columns: 1fr; padding: 12px; }
+    .prompt-hub-topbar { display: flex; }
+    /* スマホでpromptHub表示中はFABを隠す */
+    .sp-prompt-hub .extended-fab { display: none !important; }
 }

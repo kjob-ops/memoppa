@@ -213,7 +213,18 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div id="mainContent" class="main-content">
             <!-- プロンプトハブビュー（Promptフィルタ時） -->
             <div id="promptHubView" class="prompt-hub-view hidden">
-                <div class="prompt-hub-header">
+                <!-- スマホ専用トップバー -->
+                <div class="prompt-hub-topbar mobile-only">
+                    <button id="promptHubBackBtn" class="phb-back-btn" title="戻る">
+                        <span class="material-symbols-rounded">arrow_back</span>
+                    </button>
+                    <div class="phb-search-wrap">
+                        <span class="material-symbols-rounded phb-search-icon">search</span>
+                        <input type="text" id="promptHubSearchMobile" class="prompt-hub-search-input phb-search-input" placeholder="キーワードから探す" autocomplete="off">
+                    </div>
+                </div>
+                <!-- PC用ヘッダー -->
+                <div class="prompt-hub-header pc-only">
                     <div class="prompt-hub-title"><span class="material-symbols-rounded">bolt</span>プロンプト</div>
                     <div class="prompt-hub-search">
                         <span class="material-symbols-rounded" style="font-size:16px;color:var(--text-secondary)">search</span>
