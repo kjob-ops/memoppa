@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=27"></head>
+    <link rel="stylesheet" href="styles.css?v=28"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -232,13 +232,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <button id="searchModeMobileClearBtn" class="search-clear-btn hidden" title="クリア"><span class="material-symbols-rounded">close</span></button>
                     </div>
                 </div>
-                <div id="searchModePromptSection" class="search-mode-chip-section">
-                    <p class="search-mode-label pc-only">プロンプトから探す</p>
-                    <div class="search-mode-chip-row-wrap">
-                        <button class="chip-scroll-btn chip-scroll-left" data-dir="-1" title="左へ"><span class="material-symbols-rounded">chevron_left</span></button>
-                        <div id="searchModePrompts" class="search-mode-chip-row"></div>
-                        <button class="chip-scroll-btn chip-scroll-right" data-dir="1" title="右へ"><span class="material-symbols-rounded">chevron_right</span></button>
-                    </div>
+                <div id="searchModePromptSection" class="search-mode-chip-section" style="display:none;">
                 </div>
                 <div id="searchModeTagSection" class="search-mode-chip-section">
                     <div class="search-mode-label-row pc-only">
@@ -261,7 +255,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <div id="tagListGrid" class="tag-list-grid"></div>
                     </div>
                 </div>
-                <p class="search-mode-label" id="searchModeResultLabel">メモ</p>
+                <!-- プロンプトのみセクション -->
+                <div id="searchModePromptOnlySection" class="search-mode-section">
+                    <p class="search-mode-label" id="searchModePromptLabel">⚡ プロンプト</p>
+                    <div id="searchModePromptResults" class="search-mode-results sm-prompt-results"></div>
+                </div>
+                <p class="search-mode-label" id="searchModeResultLabel">すべてのメモ</p>
                 <div id="searchModeResults" class="search-mode-results"></div>
               </div>
             </div>
@@ -573,7 +572,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=27"></script>
+    <script src="app.bundle.js?v=28"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

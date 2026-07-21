@@ -1839,23 +1839,6 @@ function renderSearchMode() {
     const labelEl = document.getElementById('searchModeResultLabel');
     if (!tagsEl || !resultsEl) return;
 
-    // プロンプトチップ
-    const promptsEl = document.getElementById('searchModePrompts');
-    const promptSection = document.getElementById('searchModePromptSection');
-    if (promptsEl) {
-        promptsEl.innerHTML = '';
-        const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
-            .sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 10);
-        prompts.forEach(m => {
-            const chip = document.createElement('button');
-            chip.className = 'sm-tag-chip sm-prompt-chip';
-            chip.innerHTML = `<span class="material-symbols-rounded" style="font-size:13px;vertical-align:-2px;color:var(--accent-color)">bolt</span>${escapeHtml(m.title || '無題')}${m.useCount ? `<span class="sm-prompt-count">${m.useCount}</span>` : ''}`;
-            chip.addEventListener('click', () => { exitSearchMode(); selectMemo(m.id); });
-            promptsEl.appendChild(chip);
-        });
-        if (promptSection) promptSection.style.display = prompts.length === 0 ? 'none' : '';
-    }
-
     // タグチップ（横スクロール行）
     const allTags = new Set();
     memos.forEach(m => { if (!m.isTrashed && !m.isPrivate) { extractTags(m.content).forEach(t => allTags.add(t)); } });
@@ -1878,42 +1861,74 @@ function renderSearchMode() {
     });
     if (allTags.size === 0) tagsEl.innerHTML = '<p class="sm-empty">タグはまだありません。</p>';
 
-    // 検索条件に合致するメモ一覧
-    const results = memos.filter(m => !m.isTrashed && !m.isPrivate).filter(m => {
+    // 検索・タグフィルタ条件
+    const filterMemo = (m) => {
         const titleEmpty = !(m.title || '').trim();
         const bodyEmpty = !(m.content || '').replace(/<[^>]*>/g, '').trim();
         if (titleEmpty && bodyEmpty) return false;
-        // テキスト検索
+        if (m.isTrashed || m.isPrivate) return false;
         if (currentSearch) {
             const plainText = m.content.replace(/<[^>]*>/g, '').toLowerCase();
             if (!(m.title || '').toLowerCase().includes(currentSearch) && !plainText.includes(currentSearch)) return false;
         }
-        // 複数タグ検索
         if (selectedTags.length > 0) {
             const memoTags = extractTags(m.content).map(t => t.toLowerCase());
-            if (tagSearchMode === 'and') {
-                return selectedTags.every(t => memoTags.includes(t.toLowerCase()));
-            } else {
-                return selectedTags.some(t => memoTags.includes(t.toLowerCase()));
-            }
+            if (tagSearchMode === 'and') return selectedTags.every(t => memoTags.includes(t.toLowerCase()));
+            else return selectedTags.some(t => memoTags.includes(t.toLowerCase()));
         }
         return true;
-    }).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    };
 
-    // ラベル
+    // ---- プロンプトのみセクション ----
+    const promptOnlySection = document.getElementById('searchModePromptOnlySection');
+    const promptResultsEl = document.getElementById('searchModePromptResults');
+    const promptLabel = document.getElementById('searchModePromptLabel');
+    const promptResults = memos.filter(m => m.isPrompt && filterMemo(m))
+        .sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
+    if (promptOnlySection && promptResultsEl) {
+        promptOnlySection.style.display = promptResults.length === 0 ? 'none' : '';
+        if (promptLabel) promptLabel.textContent = `⚡ プロンプト（${promptResults.length}件）`;
+        promptResultsEl.innerHTML = '';
+        promptResults.forEach(m => {
+            const card = document.createElement('div');
+            card.className = 'sm-card sm-card-prompt';
+            const preview = m.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+            card.innerHTML = `
+                <div class="sm-card-title">
+                    <span class="material-symbols-rounded sm-bolt">bolt</span>
+                    ${m.isPinned ? '<span class="material-symbols-rounded sm-pin">push_pin</span>' : ''}
+                    <span>${escapeHtml(m.title || '無題')}</span>
+                    ${m.useCount ? `<span class="sm-card-count">${m.useCount}回</span>` : ''}
+                </div>
+                <p class="sm-card-preview">${escapeHtml(preview)}</p>`;
+            card.addEventListener('click', () => {
+                exitSearchMode();
+                setFilter('prompt');
+                setTimeout(() => selectMemo(m.id), 100);
+            });
+            promptResultsEl.appendChild(card);
+        });
+    }
+
+    // ---- すべてのメモセクション ----
+    const results = memos.filter(m => !m.isPrompt && filterMemo(m))
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
     let labelText = '';
     if (selectedTags.length > 0) {
         labelText = `${selectedTags.map(t=>`#${t}`).join(` ${tagSearchMode.toUpperCase()} `)} の結果（${results.length}件）`;
     } else if (currentSearch) {
-        labelText = `「${searchInput ? searchInput.value : currentSearch}」の検索結果（${results.length}件）`;
+        labelText = `「${searchInput ? searchInput.value : currentSearch}」のメモ（${results.length}件）`;
     } else {
         labelText = `すべてのメモ（${results.length}件）`;
     }
     if (labelEl) labelEl.textContent = labelText;
+    if (labelEl) labelEl.style.display = results.length === 0 && promptResults.length > 0 ? 'none' : '';
 
     resultsEl.innerHTML = '';
-    if (results.length === 0) {
+    if (results.length === 0 && promptResults.length === 0) {
         resultsEl.innerHTML = '<p class="sm-empty">該当するメモがありません。</p>';
+        if (labelEl) labelEl.style.display = '';
         return;
     }
     results.forEach(m => {
@@ -1922,7 +1937,6 @@ function renderSearchMode() {
         const preview = m.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
         card.innerHTML = `
             <div class="sm-card-title">
-                ${m.isPrompt ? '<span class="material-symbols-rounded sm-bolt">bolt</span>' : ''}
                 ${m.isPinned ? '<span class="material-symbols-rounded sm-pin">push_pin</span>' : ''}
                 <span>${escapeHtml(m.title || '無題のメモ')}</span>
             </div>
