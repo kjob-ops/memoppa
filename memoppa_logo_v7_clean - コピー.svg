@@ -1,0 +1,23 @@
+<svg viewBox="0 0 820 260" xmlns="http://www.w3.org/2000/svg"
+     font-family="'Baloo 2','Fredoka','M PLUS Rounded 1c',sans-serif">
+  <rect width="820" height="260" fill="#ffffff"/>
+
+  <defs>
+    <path id="stroke-m-check"
+          d="M28,116
+             C28,78 30,52 46,52
+             C62,52 64,78 64,116
+             C64,78 66,52 82,52
+             C96,52 98,72 98,90
+             C102,78 108,68 118,56"
+          fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  </defs>
+
+  <g transform="translate(55,55)">
+    <rect x="0" y="0" width="150" height="150" rx="34" fill="#0F6E56"/>
+    <use href="#stroke-m-check" stroke="#ffffff" stroke-width="13"/>
+    <circle cx="46" cy="52" r="6" fill="#ffffff"/>
+  </g>
+
+  <text x="232" y="163" font-size="84" font-weight="600" fill="#085041" letter-spacing="0.5">memoppa</text>
+</svg>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>memoppa サポートページ</title>
+<link rel="icon" type="image/svg+xml" href="memoppa-icon.svg">
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-M8STT8BH');</script>
+<!-- End Google Tag Manager -->
+
+<style>
+    :root { --accent: #0F6E56; --accent-light: #e7f5f0; --text: #1f2937; --text-sub: #6b7280; --border: #e5e7eb; }
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', Meiryo, sans-serif;
+        line-height: 1.8;
+        color: var(--text);
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 24px 20px 60px;
+        background-color: #fafafa;
+    }
+    .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .logo-row img { width: 30px; height: 30px; border-radius: 7px; }
+    .logo-row span { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .back-home {
+        display: inline-block;
+        margin-bottom: 20px;
+        padding: 9px 16px;
+        background-color: white;
+        border: 1px solid var(--border);
+        color: var(--text);
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13.5px;
+        transition: border-color 0.2s;
+    }
+    .back-home:hover { border-color: var(--accent); color: var(--accent); }
+    .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+        padding-bottom: 8px;
+    }
+    .tab-button {
+        padding: 9px 18px;
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-sub);
+        font-family: inherit;
+        transition: 0.15s;
+    }
+    .tab-button:hover { background-color: var(--accent-light); color: var(--accent); }
+    .tab-button.active {
+        background-color: var(--accent);
+        color: white;
+    }
+    .tab-content {
+        display: none;
+        background: white;
+        padding: 32px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+    .tab-content.active { display: block; }
+
+    h2 {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--accent);
+        border-bottom: 2px solid var(--accent);
+        padding-bottom: 10px;
+        margin: 0 0 20px;
+        display: inline-block;
+    }
+    h3 {
+        margin-top: 28px;
+        margin-bottom: 10px;
+        font-size: 15.5px;
+        font-weight: 700;
+        color: var(--accent);
+        text-decoration: underline;
+        text-underline-offset: 4px;
+        text-decoration-thickness: 2px;
+    }
+    p { font-size: 14.5px; }
+    ul { padding-left: 22px; margin: 8px 0 16px; }
+    li { margin-bottom: 8px; font-size: 14.5px; }
+    code { background: var(--accent-light); color: var(--accent); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+    a { color: var(--accent); }
+    .faq-item { margin-bottom: 22px; }
+    .faq-q { font-weight: 700; color: var(--accent); margin-bottom: 6px; font-size: 14.5px; }
+    .faq-a { margin: 0; }
+    .updated { text-align: right; color: var(--text-sub); font-size: 12.5px; margin-top: -10px; margin-bottom: 20px; }
+    .contact-box {
+        background-color: var(--accent-light);
+        padding: 18px;
+        border-radius: 10px;
+        margin-top: 16px;
+        font-weight: 700;
+        font-size: 17px;
+        text-align: center;
+        color: var(--accent);
+    }
+    .contact-note { margin-top: 14px; font-size: 13px; color: var(--text-sub); }
+</style>
+</head>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M8STT8BH"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+    <div class="logo-row">
+        <img src="memoppa-icon.svg" alt="memoppa">
+        <span>memoppa</span>
+    </div>
+
+    <a href="/" class="back-home">← ホームに戻る</a>
+
+    <div class="tabs">
+        <button class="tab-button active" onclick="switchTab(event, 'tab-guide')">使い方</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-faq')">よくある質問</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-terms')">利用規約</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-privacy')">プライバシーポリシー</button>
+        <button class="tab-button" onclick="switchTab(event, 'tab-contact')">お問い合わせ</button>
+    </div>
+
+    <!-- 使い方 -->
+    <div id="tab-guide" class="tab-content active">
+        <h2>使い方ガイド</h2>
+        <p>memoppa（メモっぱ）をご利用いただきありがとうございます。<br>
+        新しいタブを開くたびに現れる、AI活用のための作業机です。メモを書きながら、よく使うAIプロンプトを育てて管理できます。</p>
+
+        <h3>基本の操作</h3>
+        <ul>
+            <li><strong>メモする:</strong> 新しいタブを開いたら、そのまま書くだけ。自動保存され、すべてのデバイスに同期されます。</li>
+            <li><strong>タグ付け:</strong> 本文に <code>#アイデア</code> のように入力すると、自動でタグとして登録されます。</li>
+            <li><strong>複数選択:</strong> スマホは「長押し」、PCは「左端のチェックボックス」で一括操作モードになります。</li>
+            <li><strong>アーカイブ・ゴミ箱:</strong> リストの各メモにマウスを乗せると、アーカイブ・削除などのアイコンが表示されます。ゴミ箱内のメモは10日後に自動的に完全削除されます。</li>
+        </ul>
+
+        <h3>プロンプト庫</h3>
+        <ul>
+            <li><strong>登録:</strong> よく使うAIへの指示文を書いたメモを開き、⚡ボタンを押すとプロンプト庫に登録されます。</li>
+            <li><strong>変数テンプレート:</strong> 本文に <code>{{記事名}}</code> と書くと、コピー時に穴埋めできる型になります。<code>{{トーン:カジュアル|フォーマル}}</code> のように書けば選択式にもなります。</li>
+            <li><strong>2秒で使う:</strong> 新しいタブ上部のクイックバー、または <code>/</code> キーで検索してEnter。コピーと同時に ChatGPT・Claude・Gemini・Grok を自動で開けます（メモに <code>@claude</code> と書くか、設定で宛先AIを選択）。</li>
+            <li><strong>自動で育つ:</strong> よく使うプロンプトほど、自動で上に並びます。</li>
+        </ul>
+
+        <h3>便利な機能</h3>
+        <ul>
+            <li><strong>一括メール送信:</strong> 複数選択モードから、メモを一気にメールで送信できます。</li>
+            <li><strong>バックアップ:</strong> 設定画面から、メモのJSON形式でのエクスポート・インポート、AI向けMarkdown一括エクスポートができます。</li>
+        </ul>
+    </div>
+
+    <!-- FAQ -->
+    <div id="tab-faq" class="tab-content">
+        <h2>よくある質問</h2>
+
+        <div class="faq-item">
+            <p class="faq-q">Q. 無料で利用できますか？</p>
+            <p class="faq-a">A. はい、メモ機能・タグ付け・プロンプト庫・エクスポート機能はすべて無料でご利用いただけます。</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Q. 誤ってメモを削除してしまいました。復元できますか？</p>
+            <p class="faq-a">A. ゴミ箱に移動したメモは、ゴミ箱タブから「復元」ボタンで元に戻せます。ただし、ゴミ箱内のメモは10日経過すると自動的に完全削除され、それ以降は復元できません。</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Q. 端末を変更した場合、データは引き継げますか？</p>
+            <p class="faq-a">A. Googleアカウントでログインした状態でご利用いただければ、クラウド上にデータが保存され、新しい端末でもログインするだけで引き継ぎが可能です。</p>
+        </div>
+
+        <div class="faq-item">
+            <p class="faq-q">Q. Instagramやアプリ内のリンクから開くとログインできません。</p>
+            <p class="faq-a">A. Instagram・LINEなどのアプリ内ブラウザは、Googleのセキュリティポリシーによりログインがブロックされます。右上のメニューから「外部ブラウザで開く」を選択し、Safari・Chromeなどでお試しください。</p>
+        </div>
+    </div>
+
+    <!-- 利用規約 -->
+    <div id="tab-terms" class="tab-content">
+        <h2>利用規約</h2>
+        <p>本規約は、お客様がmemoppa（以下「本サービス」）を利用する際の条件を定めるものです。</p>
+
+        <h3>第1条（適用）</h3>
+        <p>本規約は、ユーザーと本サービスの利用に関わる一切の関係に適用されます。本サービスを利用することにより、ユーザーは本規約に同意したものとみなされます。</p>
+
+        <h3>第2条（禁止事項）</h3>
+        <p>ユーザーは、本サービスの利用にあたり、以下の行為をしてはなりません。</p>
+        <ul>
+            <li>法令または公序良俗に違反する行為</li>
+            <li>犯罪行為に関連する行為</li>
+            <li>本サービスのサーバーやネットワークの機能を破壊したり、妨害したりする行為</li>
+            <li>他のユーザーに関する個人情報等を収集または蓄積する行為</li>
+        </ul>
+
+        <h3>第3条（免責事項）</h3>
+        <p>運営者は、本サービスに事実上または法律上の瑕疵（安全性、信頼性、正確性、完全性、有効性、特定の目的への適合性、セキュリティなどに関する欠陥、エラーやバグ、権利侵害などを含みます）がないことを明示的にも黙示的にも保証しておりません。<br>
+        本サービスに起因してユーザーに生じたあらゆる損害について一切の責任を負いません。</p>
+    </div>
+
+    <!-- プライバシーポリシー -->
+    <div id="tab-privacy" class="tab-content">
+        <h2>プライバシーポリシー</h2>
+        <p class="updated">最終更新日: 2026年7月13日</p>
+        <p>本プライバシーポリシーは、memoppa（メモっぱ）のWebアプリケーション（https://memoppa.app/）およびChrome拡張機能（以下あわせて「本サービス」）における、ユーザー情報の取り扱いについて定めるものです。</p>
+
+        <h3>1. 収集する情報</h3>
+        <p>本サービスは、機能の提供に必要な最小限の情報のみを取り扱います。</p>
+        <ul>
+            <li><strong>Googleアカウント情報:</strong> ログイン時に、Googleアカウントのメールアドレス、表示名、プロフィール画像、およびユーザー識別子（UID）を取得します。取得するOAuthスコープは openid / email / profile のみです。連絡先、カレンダー、ドライブ等、他のGoogleサービスのデータには一切アクセスしません。</li>
+            <li><strong>ユーザーが作成したコンテンツ:</strong> ユーザーが本サービス上で作成したメモ・プロンプトの内容、タグ、および各種設定（テーマ、宛先AI設定、転送先メールアドレス等）。</li>
+            <li><strong>利用状況データ:</strong> プロンプトのコピー回数など、本サービスの機能提供（並び替え等）に必要な操作カウント。</li>
+        </ul>
+        <p>本サービスは、閲覧履歴、他のWebサイト上での行動、位置情報、キー入力の記録などを収集することは一切ありません。Chrome拡張機能は新しいタブページの置き換えのみを行い、他のWebページの内容にアクセスしません。</p>
+
+        <h3>2. 情報の利用目的</h3>
+        <ul>
+            <li>ユーザーごとのメモ・プロンプトの保存、および複数デバイス間での同期</li>
+            <li>ユーザー認証およびアカウントの識別</li>
+            <li>メール転送機能をユーザーが利用する場合の、指定アドレスへのメモ送信</li>
+            <li>本サービスの品質改善および不具合の把握</li>
+        </ul>
+
+        <h3>3. 情報の保存場所と第三者サービス</h3>
+        <p>ユーザーの情報は、Google LLCが提供するFirebase（Firebase Authentication / Cloud Firestore）に保存されます。また、本サービスの提供にあたり以下の第三者サービスを利用しています。</p>
+        <ul>
+            <li><strong>Firebase（Google LLC）:</strong> 認証およびデータの保存・同期（<a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Googleプライバシーポリシー</a>）</li>
+            <li><strong>Cloudflare, Inc.:</strong> Webサイトのホスティングおよび配信</li>
+            <li><strong>Google Fonts:</strong> フォントの配信</li>
+            <li><strong>Google Tag Manager:</strong> アクセス解析タグの管理</li>
+        </ul>
+
+        <h3>4. 第三者への提供</h3>
+        <p>本サービスは、ユーザーの個人情報およびメモの内容を第三者に販売、貸与、共有することはありません。ただし、法令に基づく開示請求があった場合はこの限りではありません。<br>
+        また、Chromeウェブストアのデベロッパープログラムポリシーに従い、取得したユーザーデータを、本サービスの単一用途（メモおよびプロンプトの管理）と無関係な目的で利用することはありません。</p>
+
+        <h3>5. 広告について</h3>
+        <p>本サービスは広告を表示せず、広告目的でユーザーデータを利用することもありません。</p>
+
+        <h3>6. データの管理と削除</h3>
+        <ul>
+            <li>ユーザーは、本サービス内でメモを個別に削除できます。ゴミ箱に移動したメモは10日後に自動的に完全削除されます。</li>
+            <li>設定画面のエクスポート機能により、ユーザーはいつでも自身のデータ（JSON形式）を取り出すことができます。</li>
+            <li>アカウントに紐づくすべてのデータの削除を希望される場合は、下記の連絡先までご連絡ください。確認のうえ、速やかに削除いたします。</li>
+        </ul>
+
+        <h3>7. セキュリティ</h3>
+        <p>ユーザーデータへのアクセスは、Firebase Authenticationによる認証と、Cloud Firestoreのセキュリティルールにより、ユーザー本人のみに制限されています。通信はすべてTLSにより暗号化されます。</p>
+
+        <h3>8. 本ポリシーの変更</h3>
+        <p>本ポリシーの内容は、法令の変更やサービス内容の変更に応じて改定されることがあります。重要な変更がある場合は、本ページにて告知します。</p>
+
+        <h3>9. お問い合わせ</h3>
+        <p>本ポリシーおよびユーザー情報の取り扱いに関するお問い合わせは、下記「お問い合わせ」タブまでお願いいたします。</p>
+    </div>
+
+    <!-- お問い合わせ -->
+    <div id="tab-contact" class="tab-content">
+        <h2>お問い合わせ</h2>
+        <p>本サービスに関するご質問、不具合の報告、ご意見などは、以下のメールアドレスまでお気軽にご連絡ください。</p>
+
+        <div class="contact-box">contact@memoppa.app</div>
+
+        <p class="contact-note">お問い合わせの際は、ご利用の端末（OS）や発生している事象の詳細をご記載いただくと、スムーズな解決につながります。<br>
+        回答まで数営業日ほどお時間をいただく場合がございます。</p>
+    </div>
+
+    <script>
+        function switchTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) { tabcontent[i].classList.remove("active"); }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) { tablinks[i].classList.remove("active"); }
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+    </script>
+</body>
+</html>

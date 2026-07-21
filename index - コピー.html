@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ja" translate="no" data-theme="light">
+<head>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-M8STT8BH');</script>
+    <!-- End Google Tag Manager -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="google" content="notranslate">
+    <meta name="description" content="memoppaは、シェアしたプロンプトの「いいね・利用数」が数字で見えるプロンプト専用メモ帳。">
+
+    <!-- OGP / SNSシェア -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://memoppa.app">
+    <meta property="og:title" content="memoppa — そのプロンプト、何回使われた？">
+    <meta property="og:description" content="memoppaは、シェアしたプロンプトの「いいね・利用数」が数字で見えるプロンプト専用メモ帳。">
+    <meta property="og:image" content="https://memoppa.app/og-image.svg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:type" content="image/svg+xml">
+    <meta property="og:locale" content="ja_JP">
+    <meta property="og:site_name" content="memoppa">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="memoppa — そのプロンプト、何回使われた？">
+    <meta name="twitter:description" content="memoppaは、シェアしたプロンプトの「いいね・利用数」が数字で見えるプロンプト専用メモ帳。">
+    <meta name="twitter:image" content="https://memoppa.app/og-image.svg">
+    
+    <title>memoppa — そのプロンプト、何回使われた？</title>
+    <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="icon" type="image/svg+xml" href="memoppa-icon.svg">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0F6E56">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="memoppa">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="stylesheet" href="styles.css?v=38"></head>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+  }
+</script>
+<body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M8STT8BH"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+    <!-- 共有プロンプトプレビュー画面（未ログインでも閲覧可能） -->
+    <div id="sharePreviewScreen" class="share-preview-screen hidden">
+        <div class="share-preview-box">
+            <div class="share-preview-logo">
+                <img src="memoppa-icon.svg" alt="memoppa" width="28" height="28" style="border-radius:7px">
+                <span>memoppa</span>
+            </div>
+            <div class="share-preview-badge"><span class="material-symbols-rounded">bolt</span> 共有されたプロンプト</div>
+            <h2 id="sharePreviewTitle" class="share-preview-title"></h2>
+            <!-- リアルタイムカウンター -->
+            <div id="sharePreviewStats" class="share-preview-stats">
+                <span id="spStatLike" class="sp-stat"><span class="material-symbols-rounded">favorite</span><span id="spLikeCount">-</span></span>
+                <span id="spStatCopy" class="sp-stat"><span class="material-symbols-rounded">content_copy</span><span id="spCopyCount">-</span></span>
+                <span id="spStatSave" class="sp-stat"><span class="material-symbols-rounded">download</span><span id="spSaveCount">-</span></span>
+            </div>
+            <div id="sharePreviewContent" class="share-preview-content"></div>
+            <div class="share-preview-actions">
+                <button id="sharePreviewLikeBtn" class="share-preview-like-btn">
+                    <span class="material-symbols-rounded">favorite</span> いいね
+                </button>
+                <button id="sharePreviewCopyBtn" class="share-preview-copy-btn">
+                    <span class="material-symbols-rounded">content_copy</span> コピーする
+                </button>
+                <button id="sharePreviewImportBtn" class="share-preview-import-btn">
+                    <span class="material-symbols-rounded">login</span> ログインして保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <!-- 共有プロンプトの案内バナー（共有URL経由のみ表示） -->
+            <div id="sharePromptBanner" class="share-prompt-banner hidden">
+                <span class="material-symbols-rounded">bolt</span>
+                <div>
+                    <strong>プロンプトが共有されています</strong>
+                    <p>Googleでログインするとこのプロンプトをあなたのmemoppaにインポートできます。</p>
+                </div>
+            </div>
+            <div class="pepper-logo-large">
+                <img src="memoppa_logo_v7_clean.svg" alt="memoppa" class="logo-img-large">
+            </div>
+            <h2 class="login-catch">そのプロンプト、何回使われた？</h2>
+            <p class="login-desc">
+                memoppaは、シェアしたプロンプトの<br>
+                「いいね・利用数」が数字で見える<br>
+                プロンプト専用メモ帳。<br>
+                すべてのデバイスで自動同期。
+            </p>
+
+            <div id="webviewWarning" class="webview-warning hidden">
+                <span class="material-symbols-rounded">warning</span>
+                <div>
+                    <strong>アプリ内ブラウザではログインできません</strong>
+                    <p>右上の「…」メニューから「<b>外部ブラウザで開く</b>」を選択してください。</p>
+                    <button id="webviewCopyUrlBtn" class="webview-copy-btn">URLをコピー</button>
+                </div>
+            </div>
+
+            <button id="googleLoginBtn" class="google-login-btn">
+                <svg class="google-icon" viewBox="0 0 24 24">
+                    <path fill="#EA4335" d="M12 5.04c1.64 0 3.12.56 4.28 1.67l3.2-3.2C17.52 1.58 14.96 1 12 1 7.35 1 3.39 3.65 1.5 7.5l3.86 3c.9-2.7 3.4-4.46 6.64-4.46z"/>
+                    <path fill="#4285F4" d="M23.49 12.27c0-.82-.07-1.6-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.42 3.58v2.96h3.9c2.28-2.1 3.55-5.19 3.55-8.69z"/>
+                    <path fill="#FBBC05" d="M5.36 14.5c-.24-.72-.38-1.49-.38-2.3s.14-1.58.38-2.3L1.5 6.9C.54 8.82 0 10.97 0 12.3s.54 3.48 1.5 5.4l3.86-3z"/>
+                    <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.9-2.96c-1.08.72-2.48 1.16-4.06 1.16-3.24 0-5.74-1.76-6.64-4.46l-3.86 3C3.39 20.35 7.35 23 12 23z"/>
+                </svg>
+                Sign in with Google
+            </button>
+            <a href="login-help.html" class="login-help-link">ログインできない場合はこちら</a>
+        </div>
+    </div>
+
+    <div id="appContainer" class="app-container hidden">
+        <div id="sidebarOverlay" class="sidebar-overlay"></div>
+        <button id="menuBtn" class="menu-btn pc-only" title="メニューを開く"><span class="material-symbols-rounded">menu</span></button>
+
+        <div id="sidebar" class="sidebar">
+            <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="papier-logo" id="logoHomeBtn" style="cursor:pointer;" title="ホームに戻る">
+                    <img src="memoppa-icon.svg" alt="memoppa" class="logo-img-icon">
+                    <span class="logo-text">memoppa</span>
+                </div>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <button id="maskToggleButton" class="icon-button mask-btn pc-only" title="画面を隠す（メモ一覧をブラー）">🙈</button>
+                    <button id="settingsBtn" class="icon-button settings-btn" title="設定を開く"><span class="material-symbols-rounded">settings</span></button>
+                    <button id="pinSidebarBtn" class="icon-button pc-only" title="サイドバーを固定する Ctrl+."><span class="material-symbols-rounded">dock_to_right</span></button>
+                </div>
+            </div>
+            
+            <div class="sidebar-actions-grid">
+                <button id="newMemoBtn" class="new-btn-full"><span class="material-symbols-rounded">add</span> 新規メモ</button>
+                <button id="searchBackBtn" class="search-back-btn hidden"><span class="material-symbols-rounded">arrow_back</span> リストに戻る</button>
+            </div>
+
+            <div id="multiSelectControls" class="multi-select-controls hidden">
+                <div class="multi-select-header">
+                    <span id="selectedCountText">0 Selected</span>
+                    <button id="cancelMultiSelectBtn" class="icon-button"><span class="material-symbols-rounded">close</span></button>
+                </div>
+                <div class="multi-select-grid">
+                    <button id="multiPinBtn" class="multi-btn"><span class="material-symbols-rounded">push_pin</span> Pin</button>
+                    <button id="multiArchiveBtn" class="multi-btn"><span class="material-symbols-rounded">archive</span> Archive</button>
+                    <button id="multiTrashBtn" class="multi-btn danger"><span class="material-symbols-rounded">delete</span> Trash</button>
+                    <button id="multiPrivateBtn" class="multi-btn"><span class="material-symbols-rounded">visibility_off</span> Private</button>
+                    <button id="multiCopyBtn" class="multi-btn"><span class="material-symbols-rounded">bolt</span> Copy</button>
+                    <button id="multiSelectAllBtn" class="multi-btn"><span class="material-symbols-rounded">select_all</span> All</button>
+                </div>
+            </div>
+
+            <div id="normalControls">
+                <div class="search-container-wrap">
+                    <button id="mobileSearchCloseBtn" class="close-modal-btn hidden" title="戻る"><span class="material-symbols-rounded">arrow_back</span></button>
+                    <div class="search-container" id="searchContainer">
+                        <span class="material-symbols-rounded search-icon">search</span>
+                        <input type="text" id="searchInput" class="search-input" placeholder="キーワードから探す" autocomplete="off">
+                        <button id="searchClearBtn" class="search-clear-btn hidden" title="クリア"><span class="material-symbols-rounded">close</span></button>
+                    </div>
+                </div>
+                <div id="sidebarTagsContainer" class="sidebar-tags-container"></div>
+                <!-- スマホ検索モード専用タグアコーディオン -->
+                <div id="mobileSearchTagAccordion" class="phub-tag-accordion" style="display:none;">
+                    <button id="mobileSearchTagBtn" class="phub-tag-toggle">
+                        <span class="material-symbols-rounded">sell</span>タグで絞り込む
+                        <span id="mobileSearchTagArrow" class="material-symbols-rounded phub-tag-arrow">expand_more</span>
+                    </button>
+                    <div id="mobileSearchTagPanel" class="phub-tag-panel hidden">
+                        <div id="mobileSearchTagChips" class="phub-tag-chips"></div>
+                    </div>
+                </div>
+                <div class="filter-sort-row">
+                    <div class="filter-buttons">
+                        <button id="allBtn" class="filter-btn active">すべて</button>
+                        <button id="promptFilterBtn" class="filter-btn prompt-tab" title="プロンプト庫"><span class="material-symbols-rounded">bolt</span>プロンプト<span id="promptCountBadge" class="prompt-count-badge hidden"></span></button>
+                    </div>
+                    <div class="filter-more-wrap">
+                        <button id="filterMoreBtn" class="sort-btn-compact" title="その他のフィルタ"><span class="material-symbols-rounded">more_horiz</span></button>
+                        <div id="filterMoreMenu" class="sort-menu hidden">
+                            <button id="archiveBtn" class="sort-menu-item" data-filter="archive"><span class="material-symbols-rounded">archive</span> アーカイブ</button>
+                            <button id="trashBtn" class="sort-menu-item" data-filter="trash"><span class="material-symbols-rounded">delete</span> ゴミ箱</button>
+                        </div>
+                    </div>
+                    <div class="sort-dropdown-wrap">
+                        <button id="sortBtn" class="sort-btn-compact" title="並び替え"><span class="material-symbols-rounded">sort</span></button>
+                        <div id="sortMenu" class="sort-menu hidden"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="memoList" class="memo-list"></div>
+
+            <button id="mobileNewMemoFab" class="fab-button mobile-only extended-fab">
+                <span class="material-symbols-rounded">edit</span><span class="fab-text">作成</span>
+            </button>
+        </div>
+        
+        <div id="mainContent" class="main-content">
+            <!-- プロンプトハブビュー（Promptフィルタ時） -->
+            <div id="promptHubView" class="prompt-hub-view hidden">
+                <div class="prompt-hub-header">
+                    <button id="promptHubBackBtn" class="prompt-hub-back-btn mobile-only" title="戻る"><span class="material-symbols-rounded">arrow_back</span></button>
+                    <div class="prompt-hub-title"><span class="material-symbols-rounded">bolt</span>プロンプト</div>
+                    <div class="prompt-hub-search">
+                        <span class="material-symbols-rounded" style="font-size:16px;color:var(--text-secondary)">search</span>
+                        <input type="text" id="promptHubSearch" class="prompt-hub-search-input" placeholder="プロンプトを検索..." autocomplete="off">
+                    </div>
+                </div>
+                <div id="promptHubTagAccordion" class="phub-tag-accordion">
+                    <button id="promptHubTagToggle" class="phub-tag-toggle">
+                        <span class="material-symbols-rounded">sell</span>タグで絞り込む
+                        <span id="promptHubTagToggleArrow" class="material-symbols-rounded phub-tag-arrow">expand_more</span>
+                    </button>
+                    <div id="promptHubTagPanel" class="phub-tag-panel hidden">
+                        <div id="promptHubTagList" class="phub-tag-chips"></div>
+                    </div>
+                </div>
+                <div id="promptHubList" class="prompt-hub-list"></div>
+            </div>
+            <div id="searchModeView" class="search-mode-view hidden">
+              <div class="search-mode-inner">
+                <div class="search-mode-header pc-only">
+                    <div class="search-mode-input-wrap">
+                        <span class="material-symbols-rounded search-icon">search</span>
+                        <input type="text" id="searchModeInput" class="search-mode-input" placeholder="キーワードから探す" autocomplete="off">
+                        <button id="searchModeInputClearBtn" class="search-clear-btn hidden" title="クリア"><span class="material-symbols-rounded">close</span></button>
+                    </div>
+                    <button id="searchModeCloseBtn" class="close-modal-btn" title="検索を閉じる (Esc)"><span class="close-modal-btn-pc"><span class="material-symbols-rounded">close</span></span></button>
+                </div>
+                <div class="search-mode-header-mobile mobile-only">
+                    <button id="searchModeBackBtn" class="search-mode-back" title="戻る"><span class="material-symbols-rounded">arrow_back</span></button>
+                    <div class="search-mode-mobile-input-wrap">
+                        <span class="material-symbols-rounded search-icon">search</span>
+                        <input type="text" id="searchModeMobileInput" class="search-input" placeholder="キーワードから探す">
+                        <button id="searchModeMobileClearBtn" class="search-clear-btn hidden" title="クリア"><span class="material-symbols-rounded">close</span></button>
+                    </div>
+                </div>
+                <div id="searchModePromptSection" class="search-mode-chip-section" style="display:none;">
+                </div>
+                <div id="searchModeTagSection" class="search-mode-chip-section">
+                    <div class="search-mode-label-row pc-only">
+                        <p class="search-mode-label">タグから探す</p>
+                        <button id="showTagListBtn" class="tag-list-toggle-btn">すべて見る <span class="material-symbols-rounded">expand_more</span></button>
+                    </div>
+                    <div class="search-mode-chip-row-wrap">
+                        <button class="chip-scroll-btn chip-scroll-left" data-dir="-1" title="左へ"><span class="material-symbols-rounded">chevron_left</span></button>
+                        <div id="searchModeTags" class="search-mode-chip-row"></div>
+                        <button class="chip-scroll-btn chip-scroll-right" data-dir="1" title="右へ"><span class="material-symbols-rounded">chevron_right</span></button>
+                    </div>
+                    <!-- タグ一覧ビュー -->
+                    <div id="tagListView" class="tag-list-view hidden">
+                        <div class="tag-list-search-mode">
+                            <button class="tag-search-mode-btn active" data-mode="and">AND</button>
+                            <button class="tag-search-mode-btn" data-mode="or">OR</button>
+                            <span class="tag-selected-label" id="tagSelectedLabel">タグを選択して絞り込み</span>
+                            <button id="tagSelectionClearBtn" class="tag-clear-btn hidden">クリア</button>
+                        </div>
+                        <div id="tagListGrid" class="tag-list-grid"></div>
+                    </div>
+                </div>
+                <!-- プロンプトのみセクション -->
+                <div id="searchModePromptOnlySection" class="search-mode-section">
+                    <p class="search-mode-label" id="searchModePromptLabel">⚡ プロンプト</p>
+                    <div id="searchModePromptResults" class="search-mode-results sm-prompt-results"></div>
+                </div>
+                <p class="search-mode-label" id="searchModeResultLabel">すべてのメモ</p>
+                <div id="searchModeResults" class="search-mode-results"></div>
+              </div>
+            </div>
+            <div class="mobile-editor-topbar mobile-only">
+                <button id="backToListBtn" class="icon-button"><span class="material-symbols-rounded">arrow_back</span></button>
+                <div class="mobile-top-actions">
+                    <button id="mobileAttachBtn" class="icon-button hidden" title="ファイルを添付"><span class="material-symbols-rounded">attach_file</span></button>
+                    <button id="mobilePromptBtn" class="icon-button" title="プロンプトとして登録"><span class="material-symbols-rounded">bolt</span></button>
+                    <button id="mobilePinBtn" class="icon-button" title="ピン留め"><span class="material-symbols-rounded">push_pin</span></button>
+                    <button id="mobileCopyBtn" class="icon-button"><span class="material-symbols-rounded">content_copy</span></button>
+                    <button id="mobileMenuBtn" class="icon-button"><span class="material-symbols-rounded">more_vert</span></button>
+                </div>
+            </div>
+
+            <div id="mobileActionMenu" class="mobile-action-menu hidden mobile-only" style="display: none;">
+                <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> <span id="actionPrivateLabel">非公開にする</span></button>
+                <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
+                <button id="actionMailBtn2" class="menu-item"><span class="material-symbols-rounded">mail</span> メールで送る</button>
+                <div class="menu-divider"></div>
+                <button id="actionDeleteBtn" class="menu-item danger"><span class="material-symbols-rounded">delete</span> 削除</button>
+            </div>
+
+            <div id="privateLockOverlay" class="private-lock-overlay hidden">
+                <span class="material-symbols-rounded lock-icon">lock</span>
+                <h2>このメモは非公開です</h2>
+                <p>タップして表示・編集</p>
+            </div>
+
+            <div id="editorContainer" class="editor-container">
+                <div id="quickPromptBarWrap" class="quick-prompt-bar-wrap hidden">
+                    <div class="quick-prompt-bar-header">
+                        <button id="qpToggleBtn" class="qp-close-btn" title="プロンプトバーを閉じる"><span class="material-symbols-rounded">expand_less</span></button>
+                    </div>
+                    <div id="quickPromptBar" class="quick-prompt-bar"></div>
+                </div>
+                <div class="memo-header">
+                    <div class="memo-title-wrap">
+                        <input type="text" id="memoTitle" class="memo-title" placeholder="タイトル...">
+                    </div>
+                    <div class="memo-actions pc-only">
+                        <button id="mainAttachBtn" class="action-btn hidden" title="ファイルを添付"><span class="material-symbols-rounded">attach_file</span></button>
+                        <button id="mainPromptBtn" class="action-btn" title="プロンプト登録・解除"><span class="material-symbols-rounded">bolt</span></button>
+                        <button id="mainPinBtn" class="action-btn" title="ピン留め・解除"><span class="material-symbols-rounded">push_pin</span></button>
+                        <button id="mainPrivateBtn" class="action-btn" title="非公開・解除"><span class="material-symbols-rounded">visibility_off</span></button>
+                        <button id="mainCopyBtn" class="action-btn" title="本文をコピー Ctrl+Shift+C"><span class="material-symbols-rounded">content_copy</span></button>
+                        <div class="action-divider"></div>
+                        <div class="action-more-wrap">
+                            <button id="mainMoreBtn" class="action-btn" title="その他の操作"><span class="material-symbols-rounded">more_horiz</span></button>
+                            <div id="memoMoreMenu" class="memo-more-menu hidden">
+                                <button id="mainShareBtn" class="more-menu-item" title="共有URLを生成"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
+                                <button id="mainMailBtn" class="more-menu-item" title="Send to Mail"><span class="material-symbols-rounded">mail</span> メールで送る</button>
+                                <div class="more-menu-divider"></div>
+                                <button id="mainDeleteBtn" class="more-menu-item danger" title="削除"><span class="material-symbols-rounded">delete</span> 削除</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="memoTagsContainer" class="memo-tags-container"></div>
+                <div class="textarea-container">
+                    <div id="memoContent" class="memo-content" contenteditable="true" data-placeholder="入力を始めてください。#タグ や [リンク] でアイデアをつなげられます。（Ctrl/Cmd+B で太字、⚡登録でプロンプト庫へ）"></div>
+                </div>
+                <div id="memoAttachmentsContainer" class="memo-attachments-container hidden"></div>
+                <input type="file" id="attachFileInput" accept="image/*,application/pdf,.pdf,.zip,application/zip,application/x-zip-compressed" multiple hidden>
+                <div class="status-bar"><span id="charCount" class="char-count">0 文字</span><span id="memoUpdatedAtStatus" class="char-count"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="onboardingModal" class="onboarding-modal hidden">
+        <div class="onboarding-box">
+            <img src="memoppa-icon.svg" alt="" class="onboarding-icon">
+            <h2>ようこそ memoppa へ！</h2>
+            <p class="onboarding-lead">新しいタブが、AIの作業机になります。<br>使い方は3ステップだけ。</p>
+
+            <div class="onboarding-step">
+                <div class="onboarding-step-num">1</div>
+                <div class="onboarding-step-body">
+                    <h3>メモする</h3>
+                    <p>新しいタブを開いたら、そのまま書くだけ。自動保存され、すべてのデバイスに同期されます。</p>
+                </div>
+            </div>
+
+            <div class="onboarding-step">
+                <div class="onboarding-step-num">2</div>
+                <div class="onboarding-step-body">
+                    <h3>⚡ プロンプトを登録する</h3>
+                    <p>何度も使うAIへの指示文を書いたら、右上の <span class="material-symbols-rounded inline-icon">bolt</span> を押してプロンプト庫へ。<br>本文に <code>{{記事名}}</code> と書くと、コピー時に穴埋めできる型になります。<br><code>{{トーン:カジュアル|フォーマル}}</code> なら選択式に。<br><a href="https://memoppa.app/prompts.html" target="_blank" rel="noopener" style="color:var(--accent-color);font-size:12px;margin-top:6px;display:inline-block;">💡 便利なプロンプト例文集を見る →</a></p>
+                </div>
+            </div>
+
+            <div class="onboarding-step">
+                <div class="onboarding-step-num">3</div>
+                <div class="onboarding-step-body">
+                    <h3>2秒で使う</h3>
+                    <p>画面上部のクイックバー、または <kbd>/</kbd> キーで検索してEnter。コピーと同時に ChatGPT / Claude / Gemini を開けます（本文に @claude と書くか、設定で宛先AIを選択）。よく使うプロンプトほど自動で上に並びます。</p>
+                </div>
+            </div>
+
+            <p class="onboarding-note">使い込むほど、あなた専用のプロンプト資産が育っていきます 🌱</p>
+            <button id="onboardingStartBtn" class="onboarding-start-btn">はじめる</button>
+        </div>
+    </div>
+
+    <div id="aiSelectModal" class="cmd-palette hidden">
+        <div class="onboarding-box">
+            <div class="onboarding-icon"><span class="material-symbols-rounded">bolt</span></div>
+            <h3>普段使うAIを教えてください</h3>
+            <p class="onboarding-sub">複数選択OK。プロンプトのコピー体験が最適化されます。</p>
+            <div class="onboarding-chips">
+                <button class="ai-chip" data-ai="claude">Claude</button>
+                <button class="ai-chip" data-ai="chatgpt">ChatGPT</button>
+                <button class="ai-chip" data-ai="gemini">Gemini</button>
+                <button class="ai-chip" data-ai="grok">Grok</button>
+            </div>
+            <button id="onboardingDoneBtn" class="onboarding-done" disabled>はじめる</button>
+            <button id="onboardingSkipBtn" class="onboarding-skip">あとで選ぶ</button>
+        </div>
+    </div>
+
+    <div id="cmdPalette" class="cmd-palette hidden">
+        <div class="cmd-palette-box">
+            <div class="cmd-palette-input-wrap">
+                <span class="material-symbols-rounded">bolt</span>
+                <input type="text" id="cmdPaletteInput" placeholder="プロンプトを検索してEnterでコピー..." autocomplete="off">
+                <kbd>esc</kbd>
+            </div>
+            <div id="cmdPaletteResults" class="cmd-palette-results"></div>
+        </div>
+    </div>
+
+    <div id="promptVarModal" class="settings-modal hidden" style="display: none;">
+        <div class="settings-content prompt-var-content">
+            <div class="settings-header">
+                <h3><span class="material-symbols-rounded" style="vertical-align:-4px; color:var(--accent-color);">bolt</span> 変数を入力</h3>
+                <button id="closePromptVarBtn" class="icon-button"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <div id="promptVarFields"></div>
+            <div id="promptVarPreview" class="prompt-var-preview"></div>
+            <button id="promptVarCopyBtn" class="settings-action-btn prompt-var-copy"><span class="material-symbols-rounded">content_copy</span> コピーする</button>
+        </div>
+    </div>
+
+    <div id="copyFallbackModal" class="settings-modal hidden" style="display: none;">
+        <div class="settings-content prompt-var-content">
+            <div class="settings-header">
+                <h3><span class="material-symbols-rounded" style="vertical-align:-4px; color:var(--accent-color);">content_copy</span> コピーできませんでした</h3>
+                <button id="closeCopyFallbackBtn" class="icon-button"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <p class="settings-hint">自動コピーに失敗しました。下のテキストを選択してコピーしてください（すでに選択済みです）。</p>
+            <textarea id="copyFallbackTextarea" class="copy-fallback-textarea" readonly></textarea>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- 検索モーダル: body直下に配置することでスマホのdisplay:none制約を回避 -->
+    <div id="searchModeView" class="search-mode-view hidden">
+      <div class="search-mode-inner">
+        <div class="search-mode-header pc-only">
+            <div class="search-mode-input-wrap">
+                <span class="material-symbols-rounded search-icon">search</span>
+                <input type="text" id="searchModeInput" class="search-mode-input" placeholder="キーワードから探す" autocomplete="off">
+                <button id="searchModeInputClearBtn" class="search-clear-btn hidden" title="クリア"><span class="material-symbols-rounded">close</span></button>
+            </div>
+            <button id="searchModeCloseBtn" class="close-modal-btn" title="検索を閉じる (Esc)"><span class="close-modal-btn-pc"><span class="material-symbols-rounded">close</span></span></button>
+        </div>
+        <div class="search-mode-header-mobile mobile-only">
+            <button id="searchModeBackBtn" class="search-mode-back" title="戻る"><span class="material-symbols-rounded">arrow_back</span></button>
+            <div class="search-mode-mobile-input-wrap">
+                <span class="material-symbols-rounded search-icon">search</span>
+                <input type="text" id="searchModeMobileInput" class="search-input" placeholder="キーワードから探す">
+                <button id="searchModeMobileClearBtn" class="search-clear-btn hidden" title="クリア"><span class="material-symbols-rounded">close</span></button>
+            </div>
+        </div>
+        <div id="searchModeTagSection" class="search-mode-chip-section">
+            <div class="search-mode-label-row pc-only">
+                <p class="search-mode-label">タグから探す</p>
+                <button id="showTagListBtn" class="tag-list-toggle-btn">すべて見る <span class="material-symbols-rounded">expand_more</span></button>
+            </div>
+            <div class="phub-tag-accordion" id="searchTagAccordionMobile" style="display:none;">
+                <button id="searchTagAccordionBtn" class="phub-tag-toggle">
+                    <span class="material-symbols-rounded">sell</span>タグで絞り込む
+                    <span id="searchTagAccordionArrow" class="material-symbols-rounded phub-tag-arrow">expand_more</span>
+                </button>
+                <div id="searchTagAccordionPanel" class="phub-tag-panel hidden">
+                    <div id="searchTagChips" class="phub-tag-chips"></div>
+                </div>
+            </div>
+            <div class="search-mode-chip-row-wrap pc-only">
+                <button class="chip-scroll-btn chip-scroll-left" data-dir="-1" title="左へ"><span class="material-symbols-rounded">chevron_left</span></button>
+                <div id="searchModeTags" class="search-mode-chip-row"></div>
+                <button class="chip-scroll-btn chip-scroll-right" data-dir="1" title="右へ"><span class="material-symbols-rounded">chevron_right</span></button>
+            </div>
+            <div id="tagListView" class="tag-list-view hidden">
+                <div class="tag-list-search-mode">
+                    <button class="tag-search-mode-btn active" data-mode="and">AND</button>
+                    <button class="tag-search-mode-btn" data-mode="or">OR</button>
+                    <span class="tag-selected-label" id="tagSelectedLabel">タグを選択して絞り込み</span>
+                    <button id="tagSelectionClearBtn" class="tag-clear-btn hidden">クリア</button>
+                </div>
+                <div id="tagListGrid" class="tag-list-grid"></div>
+            </div>
+        </div>
+        <div id="searchModePromptOnlySection" class="search-mode-section">
+            <p class="search-mode-label" id="searchModePromptLabel">⚡ プロンプト</p>
+            <div id="searchModePromptResults" class="search-mode-results sm-prompt-results"></div>
+        </div>
+        <p class="search-mode-label" id="searchModeResultLabel">すべてのメモ</p>
+        <div id="searchModeResults" class="search-mode-results"></div>
+      </div>
+    </div>
+
+    <div id="settingsModal" class="settings-modal hidden" style="display: none;">
+        <div class="settings-content">
+            <div class="settings-header">
+                <button id="closeSettingsBtn" class="close-modal-btn" title="設定を閉じる">
+                    <span class="close-modal-btn-pc"><span class="material-symbols-rounded">close</span></span>
+                    <span class="close-modal-btn-mobile"><span class="material-symbols-rounded">arrow_back</span></span>
+                </button>
+                <h3>設定</h3>
+            </div>
+
+            <div class="settings-account-box">
+                <span class="material-symbols-rounded account-icon">account_circle</span>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 11px; color: var(--text-secondary);">利用アカウント</div>
+                    <div id="currentUserEmailDisplay" style="font-size: 14px; font-weight: bold; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">loading...</div>
+                </div>
+                <button id="switchAccountBtn" class="settings-action-btn" style="flex: 0 0 auto; font-size: 12px; padding: 6px 12px; white-space: nowrap;"><span class="material-symbols-rounded" style="font-size: 16px;">swap_horiz</span> 変更</button>
+            </div>
+            
+            <button id="reopenOnboardingBtn" class="reopen-onboarding-btn"><span class="material-symbols-rounded">school</span> 使い方をもう一度見る</button>
+
+            <div class="settings-group">
+                <label>⚡ プロンプトの宛先AI</label>
+                <select id="defaultAiSelect" class="settings-select">
+                    <option value="">開かない（コピーのみ）</option>
+                    <option value="claude">Claude</option>
+                    <option value="chatgpt">ChatGPT</option>
+                    <option value="gemini">Gemini</option>
+                    <option value="grok">Grok</option>
+                </select>
+                <p class="settings-hint">プロンプトをコピーすると、選んだAIが新しいタブで開きます。メモ本文に @claude / @chatgpt / @gemini / @grok と書けば、メモごとに宛先を指定できます。</p>
+            </div>
+
+            <div class="settings-group">
+                <label>Theme</label>
+                <div class="toggle-group">
+                    <button id="themeLightBtn" class="toggle-btn active">☀️ Day</button>
+                    <button id="themeDarkBtn" class="toggle-btn">🌙 Night</button>
+                </div>
+            </div>
+
+            <div class="settings-group">
+                <label>Font Family & Size</label>
+                <div class="font-device-tabs">
+                    <button class="font-device-tab active" data-device="pc"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:-2px">desktop_windows</span> PC</button>
+                    <button class="font-device-tab" data-device="mobile"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:-2px">smartphone</span> スマホ</button>
+                </div>
+                <div id="fontPcPanel" class="font-device-panel">
+                    <select id="fontFamilySelectPc" class="settings-select" style="margin-bottom:8px;">
+                        <option value="system">System Default（游ゴシック・SF Pro）</option>
+                        <option value="noto-sans">Noto Sans JP（丸みのある明朝ゴシック）</option>
+                        <option value="biz-ud">BIZ UDPGothic（見やすいUD書体）</option>
+                        <option value="serif">Serif（明朝体）</option>
+                        <option value="monospace">Monospace（等幅・コード向き）</option>
+                    </select>
+                    <div class="toggle-group" style="margin-bottom:10px;">
+                        <button class="toggle-btn font-size-btn-pc" data-size="14px" style="padding:7px 4px;font-size:12px;">S（14px）</button>
+                        <button class="toggle-btn font-size-btn-pc active" data-size="16px" style="padding:7px 4px;font-size:12px;">M（16px）</button>
+                        <button class="toggle-btn font-size-btn-pc" data-size="20px" style="padding:7px 4px;font-size:12px;">L（20px）</button>
+                    </div>
+                </div>
+                <div id="fontMobilePanel" class="font-device-panel hidden">
+                    <select id="fontFamilySelectMobile" class="settings-select" style="margin-bottom:8px;">
+                        <option value="system">System Default（游ゴシック・SF Pro）</option>
+                        <option value="noto-sans">Noto Sans JP（丸みのある明朝ゴシック）</option>
+                        <option value="biz-ud">BIZ UDPGothic（見やすいUD書体）</option>
+                        <option value="serif">Serif（明朝体）</option>
+                        <option value="monospace">Monospace（等幅・コード向き）</option>
+                    </select>
+                    <div class="toggle-group" style="margin-bottom:10px;">
+                        <button class="toggle-btn font-size-btn-mobile" data-size="13px" style="padding:7px 4px;font-size:12px;">S（13px）</button>
+                        <button class="toggle-btn font-size-btn-mobile active" data-size="15px" style="padding:7px 4px;font-size:12px;">M（15px）</button>
+                        <button class="toggle-btn font-size-btn-mobile" data-size="18px" style="padding:7px 4px;font-size:12px;">L（18px）</button>
+                    </div>
+                </div>
+                <div id="fontPreview" class="font-preview">あいうえお ABC 123</div>
+            </div>
+
+            <div class="settings-group pc-only">
+                <label>エディタの幅（PC）</label>
+                <div class="toggle-group">
+                    <button id="editorWidthStandardBtn" class="toggle-btn active">標準（おすすめ）</button>
+                    <button id="editorWidthWideBtn" class="toggle-btn">狭める</button>
+                </div>
+            </div>
+
+            <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                <label>メール転送先</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="email" id="targetEmailInput" class="settings-select" placeholder="your@email.com" style="flex: 1;">
+                    <button id="saveEmailBtn" class="settings-action-btn" style="flex: 0 0 auto; padding: 0 16px; font-weight: bold;">Register</button>
+                </div>
+            </div>
+
+            <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                <label style="color: var(--accent-color); display: flex; align-items: center; gap: 4px;">
+                    <span class="material-symbols-rounded" style="font-size: 18px;">favorite</span> 友達を招待する
+                </label>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">
+                    あなた専用の招待リンクをコピーして、memoppaの輪を広げましょう！
+                </p>
+                <button id="shareLinkBtn" class="settings-action-btn" style="width: 100%; justify-content: center; background: rgba(16, 185, 129, 0.1); color: var(--accent-color); border-color: transparent; border-radius: 16px;">
+                    <span class="material-symbols-rounded">link</span> 招待リンクをコピー
+                </button>
+            </div>
+
+            <div class="settings-group settings-tips-box">
+                <label style="display: flex; align-items: center; gap: 4px;"><span class="material-symbols-rounded" style="font-size: 16px;">lightbulb</span> Tips: もっと便利に使う</label>
+                <ul>
+                    <li>📱 <b>スマホの場合:</b> ホーム画面に追加するとアプリのように使えます。
+                        <button id="pwaInstallBtn" class="pwa-install-btn hidden" style="margin-top:8px;">
+                            <span class="material-symbols-rounded">add_to_home_screen</span> ホーム画面に追加
+                        </button>
+                        <div id="pwaSafariHint" class="pwa-safari-hint hidden">
+                            <span class="material-symbols-rounded" style="font-size:16px;vertical-align:-3px;">ios_share</span>
+                            Safari の共有ボタン →「ホーム画面に追加」を選んでください
+                        </div>
+                    </li>
+                    <li>💻 <b>PCの場合:</b> 今後リリース予定のChrome拡張機能を使うと、新しいタブを開くたびにmemoppaが一瞬で起動します。</li>
+                    <li>⚡ <b>プロンプトに迷ったら:</b> <a href="https://memoppa.app/prompts.html" target="_blank" rel="noopener" style="color:var(--accent-color);font-weight:600;">公式プロンプト例文集</a>からコピーしてそのまま登録できます。</li>
+                </ul>
+            </div>
+
+            <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                <label>Backup (JSON) / Markdown Export</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                    <button id="exportAiBtn" class="settings-action-btn"><span class="material-symbols-rounded">markdown</span> Markdown (AI用)</button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="exportDataBtn" class="settings-action-btn"><span class="material-symbols-rounded">download</span> JSON Export</button>
+                    <button id="importDataBtn" class="settings-action-btn"><span class="material-symbols-rounded">upload</span> JSON Import</button>
+                    <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                </div>
+            </div>
+
+            <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                <a href="https://memoppa.app/privacy.html" target="_blank" rel="noopener" class="settings-action-btn" style="justify-content: flex-start; text-decoration: none; color: var(--text-primary);">
+                    <span class="material-symbols-rounded">policy</span> 使い方・利用規約・プライバシーポリシー
+                </a>
+            </div>
+
+            <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                <button id="logoutBtn" class="settings-action-btn" style="justify-content: flex-start;">
+                    <span class="material-symbols-rounded">logout</span> サインアウト
+                </button>
+                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(220,53,69,0.15);">
+                    <p style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;line-height:1.6;">アカウントを削除すると、すべてのメモとデータが完全に削除されます。この操作は取り消せません。</p>
+                    <button id="deleteAccountBtn" class="danger-zone-btn">
+                        <span class="material-symbols-rounded">person_remove</span> アカウントを削除する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="app.bundle.js?v=38"></script>
+
+    <!-- アカウント削除確認モーダル -->
+    <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">
+        <div class="delete-account-dialog">
+            <div class="delete-account-icon"><span class="material-symbols-rounded">warning</span></div>
+            <h3 class="delete-account-title">アカウントを削除しますか？</h3>
+            <p class="delete-account-desc">以下のデータがすべて完全に削除されます。<br>この操作は<strong>取り消せません</strong>。</p>
+            <ul class="delete-account-list">
+                <li>すべてのメモ</li>
+                <li>プロンプト庫</li>
+                <li>タグ・設定</li>
+            </ul>
+            <label class="delete-account-check">
+                <input type="checkbox" id="deleteAccountConfirmCheck">
+                上記を理解した上で、アカウントを削除することに同意します
+            </label>
+            <div class="delete-account-actions">
+                <button id="deleteAccountCancelBtn" class="delete-account-cancel">キャンセル</button>
+                <button id="deleteAccountConfirmBtn" class="delete-account-confirm" disabled>削除する</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

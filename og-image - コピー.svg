@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0F6E56"/>
+      <stop offset="100%" style="stop-color:#0a4f3e"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- 装飾サークル -->
+  <circle cx="1100" cy="80" r="200" fill="rgba(255,255,255,0.04)"/>
+  <circle cx="80" cy="570" r="140" fill="rgba(255,255,255,0.04)"/>
+
+  <!-- ロゴアイコン（サイトと同じsvgパス） -->
+  <g transform="translate(60,52)">
+    <rect width="72" height="72" rx="18" fill="white"/>
+    <g transform="translate(8,8) scale(0.373)">
+      <path d="M28,116 C28,78 30,52 46,52 C62,52 64,78 64,116 C64,78 66,52 82,52 C96,52 98,72 98,90 C102,78 108,68 118,56"
+            fill="none" stroke="#0F6E56" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="46" cy="52" r="6" fill="#0F6E56"/>
+    </g>
+  </g>
+  <text x="148" y="104" font-family="Arial,sans-serif" font-size="36" font-weight="800" fill="white">memoppa</text>
+
+  <!-- メインコピー -->
+  <text x="60" y="240" font-family="Arial,sans-serif" font-size="72" font-weight="800" fill="white">そのプロンプト、</text>
+  <text x="60" y="328" font-family="Arial,sans-serif" font-size="72" font-weight="800" fill="white">何回使われた？</text>
+
+  <!-- サブコピー -->
+  <text x="60" y="408" font-family="Arial,sans-serif" font-size="26" fill="rgba(255,255,255,0.8)">シェアしたプロンプトの「いいね・利用数」が</text>
+  <text x="60" y="446" font-family="Arial,sans-serif" font-size="26" fill="rgba(255,255,255,0.8)">数字で見えるプロンプト専用メモ帳。</text>
+
+  <!-- 特徴チップ -->
+  <rect x="60" y="498" width="160" height="46" rx="23" fill="rgba(255,255,255,0.15)"/>
+  <text x="140" y="527" font-family="Arial,sans-serif" font-size="19" fill="white" text-anchor="middle">⚡ プロンプト管理</text>
+
+  <rect x="236" y="498" width="140" height="46" rx="23" fill="rgba(255,255,255,0.15)"/>
+  <text x="306" y="527" font-family="Arial,sans-serif" font-size="19" fill="white" text-anchor="middle">❤️ いいね機能</text>
+
+  <rect x="392" y="498" width="160" height="46" rx="23" fill="rgba(255,255,255,0.15)"/>
+  <text x="472" y="527" font-family="Arial,sans-serif" font-size="19" fill="white" text-anchor="middle">📊 利用数表示</text>
+
+  <!-- URL -->
+  <text x="1140" y="600" font-family="Arial,sans-serif" font-size="22" fill="rgba(255,255,255,0.55)" text-anchor="end">memoppa.app</text>
+</svg>
