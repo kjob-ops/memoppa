@@ -84,11 +84,11 @@ const mainDeleteBtn = document.getElementById('mainDeleteBtn');
 
 const mobileNewMemoFab = document.getElementById('mobileNewMemoFab');
 const backToListBtn = document.getElementById('backToListBtn');
-const mobileMailBtn = document.getElementById('mobileMailBtn');
+const mobilePinBtn = document.getElementById('mobilePinBtn');
 const mobileCopyBtn = document.getElementById('mobileCopyBtn');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileActionMenu = document.getElementById('mobileActionMenu');
-const actionPinBtn = document.getElementById('actionPinBtn');
+const actionPinBtn = null; // ピンはツールバーに移動したためメニュー内は不使用
 const actionPrivateBtn = document.getElementById('actionPrivateBtn');
 const actionDeleteBtn = document.getElementById('actionDeleteBtn');
 
@@ -960,13 +960,22 @@ function setupEventListeners() {
             else { mobileActionMenu.style.display = 'none'; mobileActionMenu.classList.add('hidden'); }
             const current = memos.find(m => m.id === currentMemoId);
             if (current) {
-                if(actionPinBtn) actionPinBtn.innerHTML = `<span class="material-symbols-rounded">push_pin</span> <span id="actionPinLabel">${current.isPinned ? 'ピンを外す' : 'ピン留め'}</span>`;
+                if(mobilePinBtn) {
+                    const pinIcon = mobilePinBtn.querySelector('.material-symbols-rounded');
+                    if(pinIcon) pinIcon.style.color = current.isPinned ? 'var(--accent-color)' : '';
+                    mobilePinBtn.title = current.isPinned ? 'ピンを外す' : 'ピン留め';
+                }
                 if(actionPrivateBtn) {
                     const privLabel = document.getElementById('actionPrivateLabel');
                     if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
                 }
-                if(actionPrivateBtn) actionPrivateBtn.innerHTML = current.isPrivate ? `<span class="material-symbols-rounded">visibility</span> Make Public` : `<span class="material-symbols-rounded">visibility_off</span> Make Private`;
-                if(actionDeleteBtn) actionDeleteBtn.innerHTML = current.isTrashed ? `<span class="material-symbols-rounded">restore_from_trash</span> Restore / Delete` : `<span class="material-symbols-rounded">delete</span> Delete Note`;
+                if(actionPrivateBtn) {
+                    const privLabel = document.getElementById('actionPrivateLabel');
+                    if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
+                }
+                if(actionDeleteBtn) actionDeleteBtn.innerHTML = current.isTrashed
+                    ? `<span class="material-symbols-rounded">restore_from_trash</span> 元に戻す`
+                    : `<span class="material-symbols-rounded">delete</span> 削除`;
             }
         });
         document.addEventListener('click', (e) => { if (mobileActionMenu && !mobileActionMenu.contains(e.target) && e.target !== mobileMenuBtn) { mobileActionMenu.style.display = 'none'; } });
@@ -1039,7 +1048,7 @@ function setupEventListeners() {
         } catch (error) { showToast('送信に失敗しました', 'error'); btnElement.innerHTML = originalHtml; }
     };
     if(mainMailBtn) mainMailBtn.addEventListener('click', () => handleMail(mainMailBtn));
-    if(mobileMailBtn) mobileMailBtn.addEventListener('click', () => handleMail(mobileMailBtn));
+    if(mobilePinBtn) mobilePinBtn.addEventListener('click', () => togglePin());
 
     if(allBtn) allBtn.addEventListener('click', () => setFilter('all'));
     // プロンプトハブ内検索
@@ -1531,10 +1540,12 @@ function togglePin() {
         cloudSaveMemo(m);
         renderMemoList();
         updateMainActionButtons(m);
-        // アクションメニューのラベルも更新
-        const pinLabel = document.getElementById('actionPinLabel');
-        if(pinLabel) pinLabel.textContent = m.isPinned ? 'ピンを外す' : 'ピン留め';
-        // Undoトースト
+        // ツールバーのピンアイコンの色を更新
+        if(mobilePinBtn) {
+            const pinIcon = mobilePinBtn.querySelector('.material-symbols-rounded');
+            if(pinIcon) pinIcon.style.color = m.isPinned ? 'var(--accent-color)' : '';
+            mobilePinBtn.title = m.isPinned ? 'ピンを外す' : 'ピン留め';
+        }
         showToastWithUndo(
             m.isPinned ? 'ピン留めしました' : 'ピンを外しました',
             () => {
@@ -1543,7 +1554,11 @@ function togglePin() {
                 cloudSaveMemo(m);
                 renderMemoList();
                 updateMainActionButtons(m);
-                if(pinLabel) pinLabel.textContent = m.isPinned ? 'ピンを外す' : 'ピン留め';
+                if(mobilePinBtn) {
+                    const pinIcon = mobilePinBtn.querySelector('.material-symbols-rounded');
+                    if(pinIcon) pinIcon.style.color = m.isPinned ? 'var(--accent-color)' : '';
+                    mobilePinBtn.title = m.isPinned ? 'ピンを外す' : 'ピン留め';
+                }
             }
         );
     }

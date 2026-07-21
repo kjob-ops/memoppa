@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=26"></head>
+    <link rel="stylesheet" href="styles.css?v=27"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -205,7 +205,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div id="promptHubTagAccordion" class="phub-tag-accordion">
                     <button id="promptHubTagToggle" class="phub-tag-toggle">
-                        <span class="material-symbols-rounded">sell</span>タグから探す
+                        <span class="material-symbols-rounded">sell</span>タグで絞り込む
                         <span id="promptHubTagToggleArrow" class="material-symbols-rounded phub-tag-arrow">expand_more</span>
                     </button>
                     <div id="promptHubTagPanel" class="phub-tag-panel hidden">
@@ -270,14 +270,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div class="mobile-top-actions">
                     <button id="mobileAttachBtn" class="icon-button hidden" title="ファイルを添付"><span class="material-symbols-rounded">attach_file</span></button>
                     <button id="mobilePromptBtn" class="icon-button" title="プロンプトとして登録"><span class="material-symbols-rounded">bolt</span></button>
-                    <button id="mobileMailBtn" class="icon-button"><span class="material-symbols-rounded">mail</span></button>
+                    <button id="mobilePinBtn" class="icon-button" title="ピン留め"><span class="material-symbols-rounded">push_pin</span></button>
                     <button id="mobileCopyBtn" class="icon-button"><span class="material-symbols-rounded">content_copy</span></button>
                     <button id="mobileMenuBtn" class="icon-button"><span class="material-symbols-rounded">more_vert</span></button>
                 </div>
             </div>
 
             <div id="mobileActionMenu" class="mobile-action-menu hidden mobile-only" style="display: none;">
-                <button id="actionPinBtn" class="menu-item"><span class="material-symbols-rounded">push_pin</span> <span id="actionPinLabel">ピン留め</span></button>
                 <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> <span id="actionPrivateLabel">非公開にする</span></button>
                 <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
                 <button id="actionMailBtn2" class="menu-item"><span class="material-symbols-rounded">mail</span> メールで送る</button>
@@ -574,7 +573,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=26"></script>
+    <script src="app.bundle.js?v=27"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">
