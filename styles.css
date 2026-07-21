@@ -490,8 +490,14 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     
     .app-container.sp-view-editor .sidebar { display: none !important; }
     .app-container.sp-view-editor .main-content { display: flex !important; }
-    .search-mode-view { position: fixed; top: 0; left: 0; right: 0; bottom: 0; padding: 0; z-index: 1002; align-items: stretch; }
-    .search-mode-inner { border-radius: 0; max-height: 100vh; height: 100vh; padding: 12px 16px 80px; }
+    .search-mode-view { position: fixed; top: 0; left: 0; right: 0; bottom: 0; padding: 0; z-index: 1002; align-items: stretch; background: var(--bg-primary); }
+    .search-mode-inner { border-radius: 0; max-height: 100dvh; height: 100dvh; padding: 0; box-shadow: none; display: flex; flex-direction: column; overflow-y: auto; }
+    .search-mode-header.pc-only { display: none !important; }
+    .search-mode-header-mobile { padding: 12px 16px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-primary); position: sticky; top: 0; z-index: 10; }
+    .search-mode-chip-section { padding: 8px 16px 0; }
+    .search-mode-section { padding: 0 16px; }
+    #searchModeResultLabel { padding: 0 16px; }
+    #searchModeResults { padding: 0 16px 16px; }
     .search-mode-results { grid-template-columns: 1fr; }
     .sm-prompt-results { grid-template-columns: 1fr; }
     .search-mode-view.has-query #searchModeTagSection, .search-mode-view.has-query #searchModePromptSection { display: none !important; }

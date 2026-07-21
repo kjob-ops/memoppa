@@ -1140,8 +1140,36 @@ function setupEventListeners() {
 
     if(mobileSearchCloseBtn) mobileSearchCloseBtn.addEventListener('click', exitMobileSearchUI);
 
+    // 検索モーダル内スマホ用ヘッダーのイベント
+    const searchModeBackBtn = document.getElementById('searchModeBackBtn');
+    const searchModeMobileInput = document.getElementById('searchModeMobileInput');
+    const searchModeMobileClearBtn = document.getElementById('searchModeMobileClearBtn');
+    if(searchModeBackBtn) searchModeBackBtn.addEventListener('click', () => exitSearchMode());
+    if(searchModeMobileInput) {
+        searchModeMobileInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value.toLowerCase();
+            const hasVal = !!e.target.value;
+            if(searchModeMobileClearBtn) searchModeMobileClearBtn.classList.toggle('hidden', !hasVal);
+            renderSearchMode();
+        });
+    }
+    if(searchModeMobileClearBtn) searchModeMobileClearBtn.addEventListener('click', () => {
+        currentSearch = '';
+        if(searchModeMobileInput) { searchModeMobileInput.value = ''; searchModeMobileInput.focus(); }
+        searchModeMobileClearBtn.classList.add('hidden');
+        renderSearchMode();
+    });
+
     if(searchInput) searchInput.addEventListener('focus', () => {
         enterSearchMode();
+        // スマホの場合はモーダル内のinputにフォーカスを移す
+        if(window.innerWidth <= 768) {
+            searchInput.blur();
+            setTimeout(() => {
+                const mobileInput = document.getElementById('searchModeMobileInput') || document.getElementById('searchModeInput');
+                if(mobileInput) mobileInput.focus();
+            }, 100);
+        }
     });
     if(searchInput) searchInput.addEventListener('input', (e) => {
         const hasVal = !!e.target.value;
@@ -1745,23 +1773,29 @@ function renderQuickPromptBar() {
 let searchModeActive = false;
 
 function enterSearchMode() {
-    if (window.innerWidth <= 768) return;
     const view = document.getElementById('searchModeView');
     if (!view) return;
     searchModeActive = true;
     view.classList.remove('hidden');
-    document.getElementById('mainContent')?.classList.add('search-mode');
-    // サイドバーが固定されていなければ自動でピン固定する
-    if (!isSidebarPinned) {
-        document.body.classList.add('sidebar-pinned', 'sidebar-search-auto-pinned');
+    if (window.innerWidth > 768) {
+        document.getElementById('mainContent')?.classList.add('search-mode');
+        if (!isSidebarPinned) {
+            document.body.classList.add('sidebar-pinned', 'sidebar-search-auto-pinned');
+        }
     }
     renderSearchMode();
+    // モーダル内の検索inputにフォーカス
+    setTimeout(() => {
+        const input = document.getElementById('searchModeInput') || document.getElementById('searchModeMobileInput');
+        if(input) input.focus();
+    }, 80);
 }
 
 function exitSearchMode() {
-    if (!searchModeActive) return;
+    const view = document.getElementById('searchModeView');
+    if (!view || view.classList.contains('hidden')) return;
     searchModeActive = false;
-    document.getElementById('searchModeView')?.classList.add('hidden');
+    view.classList.add('hidden');
     document.getElementById('mainContent')?.classList.remove('search-mode');
     // 検索時だけ自動固定したサイドバーを元に戻す
     if (document.body.classList.contains('sidebar-search-auto-pinned')) {
