@@ -181,7 +181,86 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Kaku Gothic ProN','N
         <p>このプロンプトをmemoppaに登録して、次回から2秒でコピー。<br>あなただけのプロンプト集に育てよう。</p>
         <a href="https://memoppa.app" class="cta-btn">⚡ memoppaで使う</a>
     </div>
+
+    <!-- キラカード定義セクション -->
+    <div class="kira-section">
+        <div class="section-title">⚡ キラカードとは？</div>
+        <p class="kira-lead">memoppaでは、あなたのプロンプトが他の人に使われるほど「育って」いきます。<br>自分でコピーしても成長しません。<strong>他者への貢献度</strong>がレアリティを決めます。</p>
+
+        <div class="kira-score-box">
+            <div class="kira-score-title">📊 成長値の計算式</div>
+            <div class="kira-score-formula">
+                成長値 ＝ 保存された数 <span class="kira-weight">×2</span>　＋　保存後に使われた数 <span class="kira-weight">×3</span>　＋　プレビューでコピーされた数 <span class="kira-weight">×1</span>
+            </div>
+            <div class="kira-score-note">「保存して繰り返し使ってくれる人」が最も高い成長値をもたらします</div>
+        </div>
+
+        <div class="kira-ranks">
+            <div class="kira-rank normal">
+                <div class="kira-rank-badge">ノーマル</div>
+                <div class="kira-rank-score">成長値 0〜4</div>
+                <div class="kira-rank-desc">まだ共有していないか、共有したばかり</div>
+            </div>
+            <div class="kira-rank bronze">
+                <div class="kira-rank-badge">🥉 BRONZE</div>
+                <div class="kira-rank-score">成長値 5〜19</div>
+                <div class="kira-rank-desc">誰かが使い始めた証。カードのふちが銅色に</div>
+            </div>
+            <div class="kira-rank silver">
+                <div class="kira-rank-badge">🥈 SILVER</div>
+                <div class="kira-rank-score">成長値 20〜59</div>
+                <div class="kira-rank-desc">複数人に活用されている。カードがシルバーに輝く</div>
+            </div>
+            <div class="kira-rank gold">
+                <div class="kira-rank-badge">🥇 GOLD</div>
+                <div class="kira-rank-score">成長値 60〜</div>
+                <div class="kira-rank-desc">多くの人に使われた実績あり。ゴールドバッジが輝く</div>
+            </div>
+        </div>
+
+        <div class="kira-events">
+            <div class="kira-event-title">📌 カウントされる操作</div>
+            <table class="kira-table">
+                <tr><th>操作</th><th>誰が</th><th>成長値</th></tr>
+                <tr><td>プレビュー画面でコピー</td><td>未ログイン含む誰でも</td><td class="kira-pt">+1</td></tr>
+                <tr><td>共有URLから「保存する」</td><td>ログインユーザー</td><td class="kira-pt">+2</td></tr>
+                <tr><td>保存したプロンプトをコピー</td><td>保存したユーザー</td><td class="kira-pt">+3</td></tr>
+                <tr class="kira-no"><td>自分でコピーボタンを押す</td><td>自分自身</td><td>カウントなし</td></tr>
+            </table>
+        </div>
+    </div>
 </div>
+
+<style>
+.kira-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 28px 24px; margin-top: 40px; }
+.kira-lead { font-size: 14px; color: #374151; line-height: 1.8; margin-bottom: 20px; }
+.kira-score-box { background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; }
+.kira-score-title { font-size: 13px; font-weight: 700; color: #065f46; margin-bottom: 8px; }
+.kira-score-formula { font-size: 14px; color: #1f2937; font-weight: 600; line-height: 1.8; }
+.kira-weight { display: inline-block; background: #059669; color: white; border-radius: 4px; padding: 1px 6px; font-size: 12px; margin: 0 2px; }
+.kira-score-note { font-size: 12px; color: #6b7280; margin-top: 6px; }
+.kira-ranks { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+.kira-rank { border-radius: 10px; padding: 14px 16px; border: 2px solid; }
+.kira-rank.normal { border-color: #e5e7eb; background: #f9fafb; }
+.kira-rank.bronze { border-color: #d97706; background: #fffbeb; }
+.kira-rank.silver { border-color: #94a3b8; background: #f8fafc; }
+.kira-rank.gold { border-color: #fbbf24; background: #fffdf0; }
+.kira-rank-badge { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.kira-rank.bronze .kira-rank-badge { color: #b45309; }
+.kira-rank.silver .kira-rank-badge { color: #475569; }
+.kira-rank.gold .kira-rank-badge { color: #b45309; }
+.kira-rank-score { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 4px; }
+.kira-rank-desc { font-size: 12px; color: #6b7280; line-height: 1.5; }
+.kira-events { }
+.kira-event-title { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 10px; }
+.kira-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kira-table th { background: #f3f4f6; padding: 8px 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; }
+.kira-table td { padding: 8px 12px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.kira-table tr:last-child td { border-bottom: none; }
+.kira-pt { font-weight: 800; color: #059669; }
+.kira-no td { color: #9ca3af !important; }
+@media(max-width:600px){ .kira-ranks{grid-template-columns:1fr 1fr;} .kira-table{font-size:12px;} }
+</style>
 
 <script>
 function copyPrompt(btn) {

@@ -202,7 +202,8 @@ onAuthStateChanged(auth, (user) => {
         if(shareId) {
             sessionStorage.removeItem('pendingShareId');
             history.replaceState({}, '', location.pathname);
-            setTimeout(() => importSharedPrompt(shareId), 1500); // メモ読み込み後に実行
+            // ログイン済みでも自動インポートせず、プレビュー＋「保存する」ボタンを表示
+            setTimeout(() => showSharePreview(shareId, true), 800);
         }
     } else {
         currentUser = null;
@@ -2063,10 +2064,11 @@ function directPrivate(id) {
 async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
 
 // プロンプト共有URL生成
-async function showSharePreview(shareId) {
+async function showSharePreview(shareId, isLoggedIn = false) {
     const previewScreen = document.getElementById('sharePreviewScreen');
     const loginScreen = document.getElementById('loginScreen');
     if(loginScreen) loginScreen.classList.add('hidden');
+    if(isLoggedIn && appContainer) appContainer.classList.add('hidden');
     if(previewScreen) previewScreen.classList.remove('hidden');
 
     try {
@@ -2086,25 +2088,65 @@ async function showSharePreview(shareId) {
         const data = snap.data();
         const titleEl = document.getElementById('sharePreviewTitle');
         const contentEl = document.getElementById('sharePreviewContent');
+        // 改行を保持してプレーンテキスト化
+        const displayText = (data.content || '')
+            .replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
+            .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
+            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+            .replace(/\n{3,}/g, '\n\n').trim();
         if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
-        if(contentEl) contentEl.textContent = (data.content || '').replace(/<[^>]*>/g, '').trim();
+        if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
 
-        // コピーボタン
+        // 改変可否バッジ
+        if(titleEl && data.allowRemix === false) {
+            const badge = document.createElement('span');
+            badge.style.cssText = 'display:inline-block;margin-left:8px;font-size:11px;padding:2px 8px;border-radius:99px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:600;vertical-align:middle;';
+            badge.textContent = '改変禁止';
+            titleEl.appendChild(badge);
+        }
+
+        // コピーボタン（未ログイン含む誰でも）→ previewCopyCountを計測
         const copyBtn = document.getElementById('sharePreviewCopyBtn');
         if(copyBtn) copyBtn.addEventListener('click', () => {
-            const text = (data.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-            navigator.clipboard.writeText(text).then(() => {
+            navigator.clipboard.writeText(displayText).then(() => {
                 copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピーしました';
                 setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピーする'; }, 2000);
+                // キラカード育成：プレビューコピーを共有元に還流（重み弱）
+                updateDoc(ref, { previewCopyCount: increment(1) }).catch(() => {});
             });
         });
 
-        // 追加ボタン → ログイン画面へ
+        // 保存ボタン：ログイン済みなら即インポート、未ログインならログイン画面へ
         const importBtn = document.getElementById('sharePreviewImportBtn');
-        if(importBtn) importBtn.addEventListener('click', () => {
-            previewScreen?.classList.add('hidden');
-            loginScreen?.classList.remove('hidden');
-        });
+        if(importBtn) {
+            importBtn.innerHTML = isLoggedIn
+                ? '<span class="material-symbols-rounded">download</span> 保存する'
+                : '<span class="material-symbols-rounded">login</span> ログインして保存';
+            importBtn.addEventListener('click', async () => {
+                if(isLoggedIn) {
+                    previewScreen?.classList.add('hidden');
+                    appContainer?.classList.remove('hidden');
+                    await importSharedPrompt(shareId);
+                } else {
+                    sessionStorage.setItem('pendingShareId', shareId);
+                    previewScreen?.classList.add('hidden');
+                    loginScreen?.classList.remove('hidden');
+                }
+            });
+        }
+
+        // ログイン済み用：保存せず閉じるリンクを追加
+        if(isLoggedIn && previewScreen && !document.getElementById('sharePreviewSkipBtn')) {
+            const skip = document.createElement('button');
+            skip.id = 'sharePreviewSkipBtn';
+            skip.textContent = '保存せずに閉じる';
+            skip.style.cssText = 'display:block;margin:14px auto 0;background:none;border:none;color:var(--text-secondary);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit;';
+            skip.addEventListener('click', () => {
+                previewScreen.classList.add('hidden');
+                appContainer?.classList.remove('hidden');
+            });
+            (importBtn?.parentElement || previewScreen).appendChild(skip);
+        }
 
     } catch(e) {
         const contentEl = document.getElementById('sharePreviewContent');
@@ -2345,6 +2387,7 @@ async function doSharePrompt(memo, overrideContent, allowRemix = true) {
             uid: currentUser.uid,
             importCount: 0,
             useCount: 0,
+            previewCopyCount: 0,
             allowRemix: allowRemix,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
@@ -2489,11 +2532,17 @@ function applySettings() {
     const qpWrap = document.getElementById('quickPromptBarWrap');
     if(qpWrap) qpWrap.classList.toggle('hidden', !qpOpen);
 }
-function getRarity(count) {
-    if (count >= 30) return { level: 'gold',   label: '🥇 GOLD',   class: 'rarity-gold' };
-    if (count >= 10) return { level: 'silver', label: '🥈 SILVER', class: 'rarity-silver' };
-    if (count >= 3)  return { level: 'bronze', label: '🥉 BRONZE', class: 'rarity-bronze' };
+// キラカード レアリティ判定
+// 成長値 = importCount×2 + useCount×3 + previewCopyCount×1
+// 「保存して繰り返し使ってくれる人」が最も価値が高く、通りすがりのコピーは軽い重み
+function getRarity(growthScore) {
+    if (growthScore >= 60) return { level: 'gold',   label: '🥇 GOLD',   class: 'rarity-gold' };
+    if (growthScore >= 20) return { level: 'silver', label: '🥈 SILVER', class: 'rarity-silver' };
+    if (growthScore >= 5)  return { level: 'bronze', label: '🥉 BRONZE', class: 'rarity-bronze' };
     return { level: 'normal', label: '', class: 'rarity-normal' };
+}
+function calcGrowthScore(data) {
+    return (data.importCount || 0) * 2 + (data.useCount || 0) * 3 + (data.previewCopyCount || 0) * 1;
 }
 
 function renderPromptHub(query = '', activeTag = null) {
@@ -2588,13 +2637,16 @@ function renderPromptHub(query = '', activeTag = null) {
                     if (snap.exists()) {
                         const data = snap.data();
                         const importCount = data.importCount || 0;
-                        const externalUseCount = data.useCount || 0;
+                        const previewCopies = data.previewCopyCount || 0;
                         if (statsEl) {
-                            statsEl.innerHTML = importCount > 0
-                                ? `<span class="material-symbols-rounded">group</span>${importCount}人にインポートされました`
+                            const statParts = [];
+                            if (importCount > 0) statParts.push(`${importCount}人が保存`);
+                            if (previewCopies > 0) statParts.push(`${previewCopies}回コピー`);
+                            statsEl.innerHTML = statParts.length > 0
+                                ? `<span class="material-symbols-rounded">group</span>${statParts.join('・')}`
                                 : `<span class="material-symbols-rounded">share</span>共有中`;
                         }
-                        const rarity = getRarity(importCount + externalUseCount);
+                        const rarity = getRarity(calcGrowthScore(data));
                         card.classList.remove('rarity-normal', 'rarity-bronze', 'rarity-silver', 'rarity-gold');
                         card.classList.add(rarity.class);
                         const badgeEl = document.getElementById(`rarityBadge_${m.id}`);
