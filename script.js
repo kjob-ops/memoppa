@@ -2834,11 +2834,13 @@ function setFilter(filter) {
     if(filter === 'prompt') {
         promptHubView?.classList.remove('hidden');
         editorContainer?.classList.add('hidden');
+        appContainer?.classList.add('prompt-hub-active');
         renderPromptHub();
         showMobileEditor(); // スマホでもmainContentを表示（promptHubViewはその中にある）
     } else {
         promptHubView?.classList.add('hidden');
         editorContainer?.classList.remove('hidden');
+        appContainer?.classList.remove('prompt-hub-active');
     }
     exitMultiSelect();
     // promptフィルタ以外はスマホでサイドバーに戻す。promptはshowMobileEditorで対応済みなのでここではスキップ
