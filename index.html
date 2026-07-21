@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=36"></head>
+    <link rel="stylesheet" href="styles.css?v=37"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -63,6 +63,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
             <div class="share-preview-badge"><span class="material-symbols-rounded">bolt</span> 共有されたプロンプト</div>
             <h2 id="sharePreviewTitle" class="share-preview-title"></h2>
+            <!-- リアルタイムカウンター -->
+            <div id="sharePreviewStats" class="share-preview-stats">
+                <span id="spStatLike" class="sp-stat"><span class="material-symbols-rounded">favorite</span><span id="spLikeCount">-</span></span>
+                <span id="spStatCopy" class="sp-stat"><span class="material-symbols-rounded">content_copy</span><span id="spCopyCount">-</span></span>
+                <span id="spStatSave" class="sp-stat"><span class="material-symbols-rounded">download</span><span id="spSaveCount">-</span></span>
+            </div>
             <div id="sharePreviewContent" class="share-preview-content"></div>
             <div class="share-preview-actions">
                 <button id="sharePreviewLikeBtn" class="share-preview-like-btn">
@@ -641,7 +647,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=36"></script>
+    <script src="app.bundle.js?v=37"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

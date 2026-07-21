@@ -2238,6 +2238,26 @@ async function showSharePreview(shareId, isLoggedIn = false) {
         if(!snap.exists()) throw new Error('このリンクは無効か期限切れです');
 
         const data = snap.data();
+
+        // リアルタイムカウンター購読
+        const unsubPreview = onSnapshot(ref, (s) => {
+            if(!s.exists()) return;
+            const d = s.data();
+            const likeCount = document.getElementById('spLikeCount');
+            const copyCount = document.getElementById('spCopyCount');
+            const saveCount = document.getElementById('spSaveCount');
+            if(likeCount) likeCount.textContent = (d.likeCount || 0);
+            if(copyCount) copyCount.textContent = (d.previewCopyCount || 0);
+            if(saveCount) saveCount.textContent = (d.importCount || 0);
+        });
+        // プレビュー画面を閉じたら購読解除
+        const previewCloseObserver = new MutationObserver(() => {
+            if(previewScreen?.classList.contains('hidden')) {
+                unsubPreview();
+                previewCloseObserver.disconnect();
+            }
+        });
+        if(previewScreen) previewCloseObserver.observe(previewScreen, { attributes: true, attributeFilter: ['class'] });
         const titleEl = document.getElementById('sharePreviewTitle');
         const contentEl = document.getElementById('sharePreviewContent');
 
@@ -2251,10 +2271,10 @@ async function showSharePreview(shareId, isLoggedIn = false) {
         if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
         if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
 
-        // ---- いいねボタン（previewCopyCount +1、コピーなし）----
+        // ---- いいねボタン（likeCount +1）----
         const likeBtn = document.getElementById('sharePreviewLikeBtn');
         if(likeBtn) likeBtn.addEventListener('click', () => {
-            updateDoc(ref, { previewCopyCount: increment(1) }).catch(() => {});
+            updateDoc(ref, { likeCount: increment(1) }).catch(() => {});
             likeBtn.innerHTML = '<span class="material-symbols-rounded">favorite</span> いいね！';
             likeBtn.style.background = '#fee2e2';
             likeBtn.style.color = '#b91c1c';
@@ -2538,6 +2558,7 @@ async function doSharePrompt(memo, overrideContent) {
             importCount: 0,
             useCount: 0,
             previewCopyCount: 0,
+            likeCount: 0,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
         const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);
@@ -2691,7 +2712,7 @@ function getRarity(growthScore) {
     return { level: 'normal', label: '', class: 'rarity-normal' };
 }
 function calcGrowthScore(data) {
-    return (data.importCount || 0) * 2 + (data.useCount || 0) * 3 + (data.previewCopyCount || 0) * 1;
+    return (data.importCount || 0) * 2 + (data.useCount || 0) * 3 + (data.previewCopyCount || 0) * 1 + (data.likeCount || 0) * 1;
 }
 
 function renderPromptHub(query = '', activeTag = null) {

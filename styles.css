@@ -808,6 +808,12 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-preview-logo { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 700; color: #0F6E56; margin-bottom: 20px; }
 .share-preview-badge { display: inline-flex; align-items: center; gap: 5px; background: #e7f5f0; color: #0F6E56; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 99px; margin-bottom: 12px; }
 .share-preview-badge .material-symbols-rounded { font-size: 14px; }
+.share-preview-stats { display: flex; gap: 16px; margin-bottom: 14px; padding: 10px 14px; background: var(--bg-hover); border-radius: 10px; }
+.sp-stat { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.sp-stat .material-symbols-rounded { font-size: 16px; }
+#spStatLike .material-symbols-rounded { color: #b91c1c; }
+#spStatCopy .material-symbols-rounded { color: #0F6E56; }
+#spStatSave .material-symbols-rounded { color: #1d4ed8; }
 .share-preview-title { font-size: 20px; font-weight: 700; color: var(--text-primary, #1f2937); margin-bottom: 14px; }
 .share-preview-content { background: #f8faf9; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; font-size: 13px; color: #374151; line-height: 1.8; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular', 'Consolas', monospace; }
 .share-preview-actions { display: flex; gap: 10px; margin-bottom: 14px; }
