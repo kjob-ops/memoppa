@@ -65,6 +65,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="share-preview-badge"><span class="material-symbols-rounded">bolt</span> 共有されたプロンプト</div>
             <h2 id="sharePreviewTitle" class="share-preview-title"></h2>
             <div id="sharePreviewContent" class="share-preview-content"></div>
+            <!-- リアルタイムカウンター -->
+            <div id="sharePreviewStats" class="share-preview-stats">
+                <div class="sps-item" id="sharePreviewLikeWrap">
+                    <button id="sharePreviewLikeBtn" class="sps-like-btn" title="いいね（ログインが必要です）">
+                        <span class="material-symbols-rounded sps-heart">favorite</span>
+                    </button>
+                    <span id="sharePreviewLikeCount" class="sps-count">-</span>
+                </div>
+                <div class="sps-item">
+                    <span class="material-symbols-rounded sps-icon">content_copy</span>
+                    <span id="sharePreviewUseCount" class="sps-count">-</span>
+                </div>
+                <div class="sps-item">
+                    <span class="material-symbols-rounded sps-icon">group</span>
+                    <span id="sharePreviewImportCount" class="sps-count">-</span>
+                </div>
+            </div>
             <div class="share-preview-actions">
                 <button id="sharePreviewCopyBtn" class="share-preview-copy-btn">
                     <span class="material-symbols-rounded">content_copy</span> コピーする
@@ -200,7 +217,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <div class="prompt-hub-title"><span class="material-symbols-rounded">bolt</span>プロンプト</div>
                     <div class="prompt-hub-search">
                         <span class="material-symbols-rounded" style="font-size:16px;color:var(--text-secondary)">search</span>
-                        <input type="text" id="promptHubSearch" class="prompt-hub-search-input" placeholder="プロンプトを検索..." autocomplete="off">
+                        <input type="text" id="promptHubSearch" class="prompt-hub-search-input" placeholder="キーワードから探す" autocomplete="off">
                     </div>
                 </div>
                 <div id="promptHubList" class="prompt-hub-list"></div>
@@ -302,6 +319,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <button id="mainMoreBtn" class="action-btn" title="その他の操作"><span class="material-symbols-rounded">more_horiz</span></button>
                             <div id="memoMoreMenu" class="memo-more-menu hidden">
                                 <button id="mainShareBtn" class="more-menu-item" title="共有URLを生成"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
+                                <button id="mainBundleBtn" class="more-menu-item" title="バンドルXMLとしてコピー"><span class="material-symbols-rounded">package_2</span> バンドルコピー</button>
                                 <button id="mainMailBtn" class="more-menu-item" title="Send to Mail"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                                 <div class="more-menu-divider"></div>
                                 <button id="mainDeleteBtn" class="more-menu-item danger" title="削除"><span class="material-symbols-rounded">delete</span> 削除</button>
