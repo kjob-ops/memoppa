@@ -1161,14 +1161,11 @@ function setupEventListeners() {
     });
 
     if(searchInput) searchInput.addEventListener('focus', () => {
-        enterSearchMode();
-        // スマホの場合はモーダル内のinputにフォーカスを移す
-        if(window.innerWidth <= 768) {
-            searchInput.blur();
-            setTimeout(() => {
-                const mobileInput = document.getElementById('searchModeMobileInput') || document.getElementById('searchModeInput');
-                if(mobileInput) mobileInput.focus();
-            }, 100);
+        if (window.innerWidth <= 768) {
+            searchInput.blur(); // サイドバーの検索バーはすぐblur
+            enterSearchMode(); // フルスクリーン検索を開く
+        } else {
+            enterSearchMode();
         }
     });
     if(searchInput) searchInput.addEventListener('input', (e) => {
@@ -1784,10 +1781,15 @@ function enterSearchMode() {
         }
     }
     renderSearchMode();
-    // モーダル内の検索inputにフォーカス
+    // フォーカスをモーダル内inputへ
     setTimeout(() => {
-        const input = document.getElementById('searchModeInput') || document.getElementById('searchModeMobileInput');
-        if(input) input.focus();
+        if (window.innerWidth <= 768) {
+            const mobileInput = document.getElementById('searchModeMobileInput');
+            if(mobileInput) mobileInput.focus();
+        } else {
+            const input = document.getElementById('searchModeInput');
+            if(input) input.focus();
+        }
     }, 80);
 }
 
