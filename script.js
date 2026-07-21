@@ -1096,13 +1096,10 @@ function setupEventListeners() {
     if(logoHomeBtn) logoHomeBtn.addEventListener('click', () => {
         setSearch(''); setFilter('all');
         exitSearchMode();
+        exitMobileSearchUI();
         if(searchInput) searchInput.value = '';
         if(searchClearBtn) searchClearBtn.classList.add('hidden');
         renderMemoList();
-        // 先頭のメモを開く
-        const first = memos.find(m => !m.isTrashed && !m.isPrivate && (m.title || '').trim() || (m.content || '').replace(/<[^>]*>/g,'').trim());
-        if(first && window.innerWidth > 768) selectMemo(first.id);
-        if(window.innerWidth <= 768) exitMobileSearchUI();
     });
 
     const mobileSearchCloseBtn = document.getElementById('mobileSearchCloseBtn');
