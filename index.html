@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=33"></head>
+    <link rel="stylesheet" href="styles.css?v=34"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -168,6 +168,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </div>
                 </div>
                 <div id="sidebarTagsContainer" class="sidebar-tags-container"></div>
+                <!-- スマホ検索モード専用タグアコーディオン -->
+                <div id="mobileSearchTagAccordion" class="phub-tag-accordion mobile-only" style="display:none;">
+                    <button id="mobileSearchTagBtn" class="phub-tag-toggle">
+                        <span class="material-symbols-rounded">sell</span>タグで絞り込む
+                        <span id="mobileSearchTagArrow" class="material-symbols-rounded phub-tag-arrow">expand_more</span>
+                    </button>
+                    <div id="mobileSearchTagPanel" class="phub-tag-panel hidden">
+                        <div id="mobileSearchTagChips" class="phub-tag-chips"></div>
+                    </div>
+                </div>
                 <div class="filter-sort-row">
                     <div class="filter-buttons">
                         <button id="allBtn" class="filter-btn active">すべて</button>
@@ -631,7 +641,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=33"></script>
+    <script src="app.bundle.js?v=34"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

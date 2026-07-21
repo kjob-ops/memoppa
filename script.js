@@ -1110,28 +1110,32 @@ function setupEventListeners() {
     function enterMobileSearchUI() {
         const sidebarHeader = document.querySelector('.sidebar-header');
         const sidebarActionsGrid = document.querySelector('.sidebar-actions-grid');
+        const filterSortRow = document.querySelector('.filter-sort-row');
         if(sidebarHeader) sidebarHeader.classList.add('search-hidden');
         if(sidebarActionsGrid) sidebarActionsGrid.classList.add('search-hidden');
+        if(filterSortRow) filterSortRow.classList.add('search-hidden');
         if(mobileSearchCloseBtn) {
             mobileSearchCloseBtn.innerHTML = '<span class="material-symbols-rounded">arrow_back</span>';
             mobileSearchCloseBtn.classList.remove('hidden');
         }
         if(searchClearBtn) searchClearBtn.classList.add('hidden');
+        // タグアコーディオンを表示（サイドバーのタグ横スクロールの代わり）
+        const mobileTagAccordion = document.getElementById('mobileSearchTagAccordion');
+        if(mobileTagAccordion) mobileTagAccordion.style.display = '';
         updateSidebarTags();
-        sidebarTagsContainer.classList.add('show');
-        const filterSortRow = document.querySelector('.filter-sort-row');
-        if(filterSortRow) filterSortRow.classList.add('search-hidden');
+        renderMemoList();
     }
 
     function exitMobileSearchUI() {
         const sidebarHeader = document.querySelector('.sidebar-header');
         const sidebarActionsGrid = document.querySelector('.sidebar-actions-grid');
+        const filterSortRow = document.querySelector('.filter-sort-row');
         if(sidebarHeader) sidebarHeader.classList.remove('search-hidden');
         if(sidebarActionsGrid) sidebarActionsGrid.classList.remove('search-hidden');
-        if(mobileSearchCloseBtn) mobileSearchCloseBtn.classList.add('hidden');
-        sidebarTagsContainer.classList.remove('show');
-        const filterSortRow = document.querySelector('.filter-sort-row');
         if(filterSortRow) filterSortRow.classList.remove('search-hidden');
+        if(mobileSearchCloseBtn) mobileSearchCloseBtn.classList.add('hidden');
+        const mobileTagAccordion = document.getElementById('mobileSearchTagAccordion');
+        if(mobileTagAccordion) mobileTagAccordion.style.display = 'none';
         currentSearch = '';
         if(searchInput) { searchInput.value = ''; searchInput.blur(); }
         if(searchClearBtn) searchClearBtn.classList.add('hidden');
@@ -1139,6 +1143,40 @@ function setupEventListeners() {
     }
 
     if(mobileSearchCloseBtn) mobileSearchCloseBtn.addEventListener('click', exitMobileSearchUI);
+
+    // スマホ検索タグアコーディオン
+    const mobileSearchTagBtn = document.getElementById('mobileSearchTagBtn');
+    const mobileSearchTagPanel = document.getElementById('mobileSearchTagPanel');
+    const mobileSearchTagArrow = document.getElementById('mobileSearchTagArrow');
+    if(mobileSearchTagBtn && mobileSearchTagPanel) {
+        mobileSearchTagBtn.addEventListener('click', () => {
+            const isOpen = !mobileSearchTagPanel.classList.contains('hidden');
+            mobileSearchTagPanel.classList.toggle('hidden', isOpen);
+            if(mobileSearchTagArrow) mobileSearchTagArrow.textContent = isOpen ? 'expand_more' : 'expand_less';
+            if(!isOpen) renderMobileSearchSidebarTags();
+        });
+    }
+    function renderMobileSearchSidebarTags() {
+        const chips = document.getElementById('mobileSearchTagChips');
+        if(!chips) return;
+        const allTags = new Set();
+        memos.forEach(m => { if(!m.isTrashed && !m.isPrivate) extractTags(m.content).forEach(t => allTags.add(t)); });
+        chips.innerHTML = '';
+        Array.from(allTags).sort().forEach(tag => {
+            const btn = document.createElement('button');
+            const isActive = selectedTags.includes(tag);
+            btn.className = 'phub-tag-chip' + (isActive ? ' active' : '');
+            btn.textContent = tag;
+            btn.addEventListener('click', () => {
+                if(selectedTags.includes(tag)) selectedTags = selectedTags.filter(t => t !== tag);
+                else selectedTags.push(tag);
+                currentSearch = selectedTags.length > 0 ? '' : currentSearch;
+                renderMobileSearchSidebarTags();
+                renderMemoList();
+            });
+            chips.appendChild(btn);
+        });
+    }
 
     // 検索モーダル内スマホ用ヘッダーのイベント
     const searchModeBackBtn = document.getElementById('searchModeBackBtn');
@@ -1167,7 +1205,11 @@ function setupEventListeners() {
         const pcTagLabel = document.querySelector('#searchModeTagSection .search-mode-label-row.pc-only');
         if(pcTagWrap) pcTagWrap.style.display = isMobile ? 'none' : '';
         if(pcTagLabel) pcTagLabel.style.display = isMobile ? 'none' : '';
+        // スマホではタグチップ行(searchModeTags)自体を隠す
+        const tagsRow = document.getElementById('searchModeTags');
+        if(tagsRow && tagsRow.parentElement) tagsRow.parentElement.style.display = isMobile ? 'none' : '';
     }
+    window.updateSearchTagVisibility = updateSearchTagVisibility;
     function renderMobileSearchTags() {
         const chips = document.getElementById('searchTagChips');
         if(!chips) return;
@@ -1205,8 +1247,7 @@ function setupEventListeners() {
 
     if(searchInput) searchInput.addEventListener('focus', () => {
         if (window.innerWidth <= 768) {
-            searchInput.blur(); // サイドバーの検索バーはすぐblur
-            enterSearchMode(); // フルスクリーン検索を開く
+            enterMobileSearchUI();
         } else {
             enterSearchMode();
         }
@@ -1824,7 +1865,7 @@ function enterSearchMode() {
         }
     }
     renderSearchMode();
-    if(typeof updateSearchTagVisibility === 'function') updateSearchTagVisibility();
+    if(typeof window.updateSearchTagVisibility === 'function') window.updateSearchTagVisibility();
     // フォーカスをモーダル内inputへ
     setTimeout(() => {
         if (window.innerWidth <= 768) {
