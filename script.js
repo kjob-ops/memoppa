@@ -2187,7 +2187,6 @@ async function showSharePreview(shareId, isLoggedIn = false) {
     if(previewScreen) previewScreen.classList.remove('hidden');
 
     try {
-        // base64デコード
         let uid, docId;
         try {
             const decoded = atob(shareId);
@@ -2203,40 +2202,47 @@ async function showSharePreview(shareId, isLoggedIn = false) {
         const data = snap.data();
         const titleEl = document.getElementById('sharePreviewTitle');
         const contentEl = document.getElementById('sharePreviewContent');
+
         // 改行を保持してプレーンテキスト化
         const displayText = (data.content || '')
             .replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
             .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
             .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
             .replace(/\n{3,}/g, '\n\n').trim();
+
         if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
         if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
 
-        // 改変可否バッジ
-        if(titleEl && data.allowRemix === false) {
-            const badge = document.createElement('span');
-            badge.style.cssText = 'display:inline-block;margin-left:8px;font-size:11px;padding:2px 8px;border-radius:99px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:600;vertical-align:middle;';
-            badge.textContent = '改変禁止';
-            titleEl.appendChild(badge);
-        }
+        // ---- いいねボタン（previewCopyCount +1、コピーなし）----
+        const likeBtn = document.getElementById('sharePreviewLikeBtn');
+        if(likeBtn) likeBtn.addEventListener('click', () => {
+            updateDoc(ref, { previewCopyCount: increment(1) }).catch(() => {});
+            likeBtn.innerHTML = '<span class="material-symbols-rounded">favorite</span> いいね！';
+            likeBtn.style.background = '#fee2e2';
+            likeBtn.style.color = '#b91c1c';
+            likeBtn.disabled = true;
+        });
 
-        // コピーボタン（未ログイン含む誰でも）→ previewCopyCountを計測
+        // ---- コピーボタン（previewCopyCount +1）----
         const copyBtn = document.getElementById('sharePreviewCopyBtn');
         if(copyBtn) copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(displayText).then(() => {
-                copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピーしました';
-                setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピーする'; }, 2000);
-                // キラカード育成：プレビューコピーを共有元に還流（重み弱）
                 updateDoc(ref, { previewCopyCount: increment(1) }).catch(() => {});
+                copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピーしました';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピーする';
+                }, 2000);
+            }).catch(() => {
+                showCopyFallback(displayText);
             });
         });
 
-        // 保存ボタン：ログイン済みなら即インポート、未ログインならログイン画面へ
+        // ---- 保存ボタン（ログイン済み → 「保存する」、未ログイン → 「ログインして保存」）----
         const importBtn = document.getElementById('sharePreviewImportBtn');
         if(importBtn) {
-            importBtn.innerHTML = isLoggedIn
-                ? '<span class="material-symbols-rounded">download</span> 保存する'
-                : '<span class="material-symbols-rounded">login</span> ログインして保存';
+            if(isLoggedIn) {
+                importBtn.innerHTML = '<span class="material-symbols-rounded">download</span> 保存する';
+            }
             importBtn.addEventListener('click', async () => {
                 if(isLoggedIn) {
                     previewScreen?.classList.add('hidden');
@@ -2250,8 +2256,10 @@ async function showSharePreview(shareId, isLoggedIn = false) {
             });
         }
 
-        // ログイン済み用：保存せず閉じるリンクを追加
-        if(isLoggedIn && previewScreen && !document.getElementById('sharePreviewSkipBtn')) {
+        // ログイン済み：保存せずに閉じる
+        if(isLoggedIn && previewScreen) {
+            const existing = document.getElementById('sharePreviewSkipBtn');
+            if(existing) existing.remove();
             const skip = document.createElement('button');
             skip.id = 'sharePreviewSkipBtn';
             skip.textContent = '保存せずに閉じる';
@@ -2260,7 +2268,7 @@ async function showSharePreview(shareId, isLoggedIn = false) {
                 previewScreen.classList.add('hidden');
                 appContainer?.classList.remove('hidden');
             });
-            (importBtn?.parentElement || previewScreen).appendChild(skip);
+            previewScreen.querySelector('.share-preview-inner')?.appendChild(skip);
         }
 
     } catch(e) {
@@ -2353,16 +2361,6 @@ function openShareReviewModal(memo) {
             `}
             <div class="share-review-preview-label">タップして編集できます</div>
             <div class="share-review-live-text" id="shareReviewLiveText"></div>
-            <div class="share-review-remix-row">
-                <label class="share-review-remix-label">
-                    <input type="checkbox" id="shareRemixAllowed" checked>
-                    <span class="share-review-remix-text">
-                        <span class="material-symbols-rounded">edit</span>
-                        改変・再利用を許可する
-                    </span>
-                </label>
-                <p class="share-review-remix-hint">オフにすると受け取った人に「改変禁止」と表示されます</p>
-            </div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">rocket_launch</span> この状態でシェアする</button>
@@ -2481,9 +2479,8 @@ function openShareReviewModal(memo) {
     modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
         const finalText = getFinalText();
-        const allowRemix = modal.querySelector('#shareRemixAllowed')?.checked !== false;
         closeModal();
-        await doSharePrompt(memo, finalText, allowRemix);
+        await doSharePrompt(memo, finalText);
     });
 }
 
@@ -2491,7 +2488,7 @@ async function sharePrompt(memo) {
     openShareReviewModal(memo);
 }
 
-async function doSharePrompt(memo, overrideContent, allowRemix = true) {
+async function doSharePrompt(memo, overrideContent) {
     try {
         if(!currentUser) { showToast('ログインが必要です', 'error'); return; }
         const shareData = {
@@ -2503,7 +2500,6 @@ async function doSharePrompt(memo, overrideContent, allowRemix = true) {
             importCount: 0,
             useCount: 0,
             previewCopyCount: 0,
-            allowRemix: allowRemix,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
         const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);

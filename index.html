@@ -41,7 +41,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=32"></head>
+    <link rel="stylesheet" href="styles.css?v=33"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -65,14 +65,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <h2 id="sharePreviewTitle" class="share-preview-title"></h2>
             <div id="sharePreviewContent" class="share-preview-content"></div>
             <div class="share-preview-actions">
+                <button id="sharePreviewLikeBtn" class="share-preview-like-btn">
+                    <span class="material-symbols-rounded">favorite</span> いいね
+                </button>
                 <button id="sharePreviewCopyBtn" class="share-preview-copy-btn">
                     <span class="material-symbols-rounded">content_copy</span> コピーする
                 </button>
                 <button id="sharePreviewImportBtn" class="share-preview-import-btn">
-                    <span class="material-symbols-rounded">add</span> memoppaに追加する
+                    <span class="material-symbols-rounded">login</span> ログインして保存
                 </button>
             </div>
-            <p class="share-preview-note">memoppaへの追加にはGoogleアカウント連携が必要です。</p>
         </div>
     </div>
 
@@ -629,7 +631,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=32"></script>
+    <script src="app.bundle.js?v=33"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

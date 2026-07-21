@@ -809,10 +809,11 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-preview-actions { display: flex; gap: 10px; margin-bottom: 14px; }
 .share-preview-copy-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; color: #374151; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
 .share-preview-copy-btn:hover { border-color: #0F6E56; color: #0F6E56; }
+.share-preview-like-btn { flex: 0 0 auto; padding: 11px 14px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; color: #374151; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: inherit; transition: 0.15s; white-space: nowrap; }
+.share-preview-like-btn:hover { border-color: #b91c1c; color: #b91c1c; background: #fee2e2; }
 .share-preview-import-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border: none; border-radius: 10px; background: #0F6E56; color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
 .share-preview-import-btn:hover { filter: brightness(1.1); }
-.share-preview-import-btn .material-symbols-rounded, .share-preview-copy-btn .material-symbols-rounded { font-size: 16px; }
-.share-preview-note { font-size: 12px; color: #6b7280; text-align: center; line-height: 1.6; }
+.share-preview-import-btn .material-symbols-rounded, .share-preview-copy-btn .material-symbols-rounded, .share-preview-like-btn .material-symbols-rounded { font-size: 16px; }
 
 /* 共有レビューモーダル（変数化サジェスト） */
 .share-review-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; transition: opacity 0.2s; }
@@ -841,12 +842,6 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-review-preview-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .share-review-preview { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; font-size: 12.5px; color: #374151; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular','Consolas',monospace; white-space: pre-wrap; word-break: break-word; }
 .share-review-actions { display: flex; gap: 10px; }
-.share-review-remix-row { margin: 12px 0 8px; padding: 10px 12px; background: var(--bg-hover); border-radius: var(--radius-md); }
-.share-review-remix-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-primary); }
-.share-review-remix-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-color); cursor: pointer; flex-shrink: 0; }
-.share-review-remix-text { display: flex; align-items: center; gap: 5px; }
-.share-review-remix-text .material-symbols-rounded { font-size: 16px; color: var(--accent-color); }
-.share-review-remix-hint { font-size: 11px; color: var(--text-secondary); margin: 4px 0 0 24px; }
 .share-review-cancel { flex: 1; padding: 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-hover); color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-color); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
 .share-review-confirm:hover { filter: brightness(1.08); }
