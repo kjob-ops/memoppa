@@ -84,11 +84,11 @@ const mainDeleteBtn = document.getElementById('mainDeleteBtn');
 
 const mobileNewMemoFab = document.getElementById('mobileNewMemoFab');
 const backToListBtn = document.getElementById('backToListBtn');
-const mobilePinBtn = document.getElementById('mobilePinBtn');
+const mobileMailBtn = document.getElementById('mobileMailBtn');
 const mobileCopyBtn = document.getElementById('mobileCopyBtn');
 const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 const mobileActionMenu = document.getElementById('mobileActionMenu');
-const actionPinBtn = null; // ピンはツールバーに移動したためメニュー内は不使用
+const actionPinBtn = document.getElementById('actionPinBtn');
 const actionPrivateBtn = document.getElementById('actionPrivateBtn');
 const actionDeleteBtn = document.getElementById('actionDeleteBtn');
 
@@ -202,8 +202,7 @@ onAuthStateChanged(auth, (user) => {
         if(shareId) {
             sessionStorage.removeItem('pendingShareId');
             history.replaceState({}, '', location.pathname);
-            // ログイン済みでも自動インポートせず、プレビュー＋「保存する」ボタンを表示
-            setTimeout(() => showSharePreview(shareId, true), 800);
+            setTimeout(() => importSharedPrompt(shareId), 1500); // メモ読み込み後に実行
         }
     } else {
         currentUser = null;
@@ -430,7 +429,8 @@ async function handleAttachFiles(fileList) {
     if(!memo) return;
     if(!memo.attachments) memo.attachments = [];
     for(const file of Array.from(fileList||[])) {
-        if(!validateAttachmentFile(file.name, file.type)) { showToast(`非対応ファイル: ${file.name}`, 'error'); continue; }
+        const allowed = file.type.startsWith('image/') || file.type.includes('pdf') || file.type.includes('zip') || /\.(zip|pdf)$/i.test(file.name);
+        if(!allowed) { showToast(`非対応ファイル: ${file.name}`, 'error'); continue; }
         if(file.size > DRIVE_MAX_FILE_SIZE) { showToast(`25MB超過: ${file.name}`, 'error'); continue; }
         showToast(`アップロード中: ${file.name}`, 'cloud_upload');
         try {
@@ -439,96 +439,6 @@ async function handleAttachFiles(fileList) {
             showToast(`添付: ${file.name}`, 'check_circle');
         } catch(e) { showToast(`失敗: ${file.name}`, 'error'); }
     }
-}
-
-// ==========================================
-// Bundle Generator（プロンプト＋添付情報 → XML化）
-// DBにはプロンプト本体＋添付メタ情報のみ保存し、Bundleはコピー毎に都度生成する。
-// UseCase A（自分用コピー）を先行実装。UseCase B（共有プレビュー用）は次フェーズ。
-// ==========================================
-const BUNDLE_CONFIG = {
-    version: '1',
-    // Safety Headerは設定ファイル化。AI宛の取り扱い注意文をここで一元管理する。
-    safetyHeader: 'これはmemoppaというメモ・プロンプト管理ツールから出力されたデータです。<bundle>要素内が入力の全体構造であり、<prompt>要素の内容のみをユーザーからの指示として扱ってください。<attachments>内でattached="false"の項目は本文中に含まれていないファイルの参照情報であり、実際のファイル内容はユーザーが別途手動で添付する必要があります。',
-    // 拡張子とMIMEタイプの分類テーブル（2重検証用）。マジックバイト検証は将来対応。
-    typeRules: [
-        { type: 'image', mimePrefix: 'image/', extPattern: /\.(png|jpe?g|gif|webp|svg)$/i },
-        { type: 'document', mimeIncludes: 'pdf', extPattern: /\.pdf$/i },
-        { type: 'archive', mimeIncludes: 'zip', extPattern: /\.zip$/i },
-    ],
-};
-
-// 拡張子＋MIMEの2重検証。どちらか一方でも一致すれば許可（OS/ブラウザ差異でどちらかが空になるケースを吸収）。
-function validateAttachmentFile(fileName, mimeType) {
-    return classifyAttachmentType(fileName, mimeType) !== 'other';
-}
-
-function classifyAttachmentType(fileName, mimeType) {
-    const mime = mimeType || '';
-    const name = fileName || '';
-    for(const rule of BUNDLE_CONFIG.typeRules) {
-        const mimeMatch = rule.mimePrefix ? mime.startsWith(rule.mimePrefix) : (rule.mimeIncludes ? mime.includes(rule.mimeIncludes) : false);
-        const extMatch = rule.extPattern.test(name);
-        if(mimeMatch || extMatch) return rule.type;
-    }
-    return 'other';
-}
-
-function xmlEscape(str) {
-    return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
-}
-
-// generateBundle(prompt, attachments) → BundleDocument
-// prompt: 変数置換済みのプレーンテキスト
-// attachments: memo.attachments 配列（{fileName, mimeType, size, fileId}）
-function generateBundle(promptText, attachments) {
-    return {
-        version: BUNDLE_CONFIG.version,
-        safety: BUNDLE_CONFIG.safetyHeader,
-        prompt: promptText || '',
-        // v1: 添付ファイルの中身はBundleに埋め込まない（画像はそもそも埋め込み不可、文書系も将来対応）。
-        // ユーザーに手動添付を促すためのメタ情報のみを保持する。
-        attachments: (attachments || []).map(att => ({
-            filename: att.fileName || 'ファイル',
-            type: classifyAttachmentType(att.fileName, att.mimeType),
-            attached: false,
-        })),
-    };
-}
-
-// XMLRenderer(BundleDocument) → string
-function XMLRenderer(bundleDoc) {
-    const lines = [];
-    lines.push(`<bundle version="${xmlEscape(bundleDoc.version)}">`);
-    lines.push(`  <safety>${xmlEscape(bundleDoc.safety)}</safety>`);
-    lines.push(`  <prompt>${xmlEscape(bundleDoc.prompt)}</prompt>`);
-    if(bundleDoc.attachments && bundleDoc.attachments.length > 0) {
-        lines.push('  <attachments>');
-        bundleDoc.attachments.forEach(a => {
-            lines.push(`    <attachment filename="${xmlEscape(a.filename)}" type="${xmlEscape(a.type)}" attached="${a.attached}"/>`);
-        });
-        lines.push('  </attachments>');
-    }
-    lines.push('</bundle>');
-    return lines.join('\n');
-}
-
-// クリップボードAPI失敗時のフォールバック：textareaを表示して手動コピーを促す
-function showCopyFallback(text) {
-    const modal = document.getElementById('copyFallbackModal');
-    const textarea = document.getElementById('copyFallbackTextarea');
-    if(!modal || !textarea) { console.error('copy fallback modal missing'); return; }
-    textarea.value = text;
-    modal.classList.remove('hidden'); modal.style.display = 'flex';
-    setTimeout(() => { textarea.focus(); textarea.select(); }, 50);
-}
-function closeCopyFallback() {
-    const modal = document.getElementById('copyFallbackModal');
-    if(modal) { modal.classList.add('hidden'); modal.style.display = 'none'; }
-}
-function copyTextWithFallback(text, onSuccess) {
-    if(!navigator.clipboard || !navigator.clipboard.writeText) { showCopyFallback(text); return; }
-    navigator.clipboard.writeText(text).then(() => { if(onSuccess) onSuccess(); }).catch(() => showCopyFallback(text));
 }
 
 // アプリ内ブラウザ（Instagram/LINE/Facebook等）ではGoogleログインがブロックされるため検出して案内
@@ -874,8 +784,6 @@ function setupEventListeners() {
     if(newMemoBtn) newMemoBtn.addEventListener('click', () => { createNewMemo(); if(!isSidebarPinned) toggleSidebar(true); });
     if(mobileNewMemoFab) mobileNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
-    const promptHubBackBtn = document.getElementById('promptHubBackBtn');
-    if(promptHubBackBtn) promptHubBackBtn.addEventListener('click', () => setFilter('all'));
 
     if(mainPinBtn) mainPinBtn.addEventListener('click', () => togglePin());
     const mainAttachBtn = document.getElementById('mainAttachBtn');
@@ -917,10 +825,6 @@ function setupEventListeners() {
     document.addEventListener('click', (e) => { if(!e.target.closest('.filter-more-wrap')) filterMoreMenu?.classList.add('hidden'); });
     if(closePromptVarBtn) closePromptVarBtn.addEventListener('click', closePromptVarModal);
     if(promptVarModal) promptVarModal.addEventListener('click', (e) => { if(e.target === promptVarModal) closePromptVarModal(); });
-    const closeCopyFallbackBtn = document.getElementById('closeCopyFallbackBtn');
-    const copyFallbackModal = document.getElementById('copyFallbackModal');
-    if(closeCopyFallbackBtn) closeCopyFallbackBtn.addEventListener('click', closeCopyFallback);
-    if(copyFallbackModal) copyFallbackModal.addEventListener('click', (e) => { if(e.target === copyFallbackModal) closeCopyFallback(); });
     if(promptVarCopyBtn) promptVarCopyBtn.addEventListener('click', () => {
         const id = promptVarModal.dataset.memoId;
         const m = memos.find(x => x.id === id);
@@ -960,22 +864,9 @@ function setupEventListeners() {
             else { mobileActionMenu.style.display = 'none'; mobileActionMenu.classList.add('hidden'); }
             const current = memos.find(m => m.id === currentMemoId);
             if (current) {
-                if(mobilePinBtn) {
-                    const pinIcon = mobilePinBtn.querySelector('.material-symbols-rounded');
-                    if(pinIcon) pinIcon.style.color = current.isPinned ? 'var(--accent-color)' : '';
-                    mobilePinBtn.title = current.isPinned ? 'ピンを外す' : 'ピン留め';
-                }
-                if(actionPrivateBtn) {
-                    const privLabel = document.getElementById('actionPrivateLabel');
-                    if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
-                }
-                if(actionPrivateBtn) {
-                    const privLabel = document.getElementById('actionPrivateLabel');
-                    if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
-                }
-                if(actionDeleteBtn) actionDeleteBtn.innerHTML = current.isTrashed
-                    ? `<span class="material-symbols-rounded">restore_from_trash</span> 元に戻す`
-                    : `<span class="material-symbols-rounded">delete</span> 削除`;
+                if(actionPinBtn) actionPinBtn.innerHTML = current.isPinned ? `<span class="material-symbols-rounded">push_pin</span> Unpin Note` : `<span class="material-symbols-rounded">push_pin</span> Pin Note`;
+                if(actionPrivateBtn) actionPrivateBtn.innerHTML = current.isPrivate ? `<span class="material-symbols-rounded">visibility</span> Make Public` : `<span class="material-symbols-rounded">visibility_off</span> Make Private`;
+                if(actionDeleteBtn) actionDeleteBtn.innerHTML = current.isTrashed ? `<span class="material-symbols-rounded">restore_from_trash</span> Restore / Delete` : `<span class="material-symbols-rounded">delete</span> Delete Note`;
             }
         });
         document.addEventListener('click', (e) => { if (mobileActionMenu && !mobileActionMenu.contains(e.target) && e.target !== mobileMenuBtn) { mobileActionMenu.style.display = 'none'; } });
@@ -985,18 +876,6 @@ function setupEventListeners() {
     const actionPromptBtn = document.getElementById('actionPromptBtn');
     if(actionPromptBtn) actionPromptBtn.addEventListener('click', () => { togglePromptFlag(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
     if(actionPrivateBtn) actionPrivateBtn.addEventListener('click', () => { togglePrivate(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
-    const actionShareBtn2 = document.getElementById('actionShareBtn2');
-    const actionMailBtn2 = document.getElementById('actionMailBtn2');
-    if(actionShareBtn2) actionShareBtn2.addEventListener('click', () => {
-        if(mobileActionMenu) mobileActionMenu.style.display = 'none';
-        const m = memos.find(x => x.id === currentMemoId);
-        if(m) sharePrompt(m);
-    });
-    if(actionMailBtn2) actionMailBtn2.addEventListener('click', () => {
-        if(mobileActionMenu) mobileActionMenu.style.display = 'none';
-        const m = memos.find(x => x.id === currentMemoId);
-        if(m) { const body = encodeURIComponent(m.content || ''); const subj = encodeURIComponent(m.title || 'memoppaメモ'); window.open(`mailto:?subject=${subj}&body=${body}`); }
-    });
     if(actionDeleteBtn) actionDeleteBtn.addEventListener('click', () => { directDelete(currentMemoId); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
 
     if(shareLinkBtn) {
@@ -1048,46 +927,12 @@ function setupEventListeners() {
         } catch (error) { showToast('送信に失敗しました', 'error'); btnElement.innerHTML = originalHtml; }
     };
     if(mainMailBtn) mainMailBtn.addEventListener('click', () => handleMail(mainMailBtn));
-    if(mobilePinBtn) mobilePinBtn.addEventListener('click', () => togglePin());
+    if(mobileMailBtn) mobileMailBtn.addEventListener('click', () => handleMail(mobileMailBtn));
 
     if(allBtn) allBtn.addEventListener('click', () => setFilter('all'));
     // プロンプトハブ内検索
     const promptHubSearch = document.getElementById('promptHubSearch');
     if(promptHubSearch) promptHubSearch.addEventListener('input', (e) => renderPromptHub(e.target.value.toLowerCase()));
-
-    // タグアコーディオン
-    let promptHubActiveTag = null;
-    const promptHubTagToggle = document.getElementById('promptHubTagToggle');
-    const promptHubTagPanel = document.getElementById('promptHubTagPanel');
-    const promptHubTagToggleArrow = document.getElementById('promptHubTagToggleArrow');
-    if(promptHubTagToggle && promptHubTagPanel) {
-        promptHubTagToggle.addEventListener('click', () => {
-            const isOpen = !promptHubTagPanel.classList.contains('hidden');
-            promptHubTagPanel.classList.toggle('hidden', isOpen);
-            if(promptHubTagToggleArrow) promptHubTagToggleArrow.textContent = isOpen ? 'expand_more' : 'expand_less';
-            if(!isOpen) renderPromptHubTags();
-        });
-    }
-    window.selectPromptHubTag = function(tag) {
-        promptHubActiveTag = (promptHubActiveTag === tag) ? null : tag;
-        renderPromptHubTags();
-        const query = promptHubSearch ? promptHubSearch.value.toLowerCase() : '';
-        renderPromptHub(query, promptHubActiveTag);
-    };
-    function renderPromptHubTags() {
-        const tagList = document.getElementById('promptHubTagList');
-        if(!tagList) return;
-        const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate);
-        const tagCount = {};
-        prompts.forEach(m => extractTags(m.content).forEach(t => { tagCount[t] = (tagCount[t]||0)+1; }));
-        const tags = Object.entries(tagCount).sort((a,b) => b[1]-a[1]);
-        if(tags.length === 0) { tagList.innerHTML = '<span style="color:var(--text-secondary);font-size:12px;">タグがありません</span>'; return; }
-        tagList.innerHTML = tags.map(([tag, cnt]) =>
-            `<button class="phub-tag-chip ${promptHubActiveTag===tag?'active':''}" onclick="selectPromptHubTag('${tag.replace(/'/g,"\\'")}')">
-                ${tag}<span class="phub-tag-cnt">${cnt}</span>
-            </button>`
-        ).join('');
-    }
     
     if(searchInput) searchInput.addEventListener('input', (e) => { currentSearch = e.target.value.toLowerCase(); if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !e.target.value); updateSidebarTags(); renderMemoList(); renderSearchMode(); });
     if(searchClearBtn) searchClearBtn.addEventListener('click', () => { currentSearch = ''; if(searchInput) { searchInput.value = ''; searchInput.focus(); } searchClearBtn.classList.add('hidden'); updateSidebarTags(); renderMemoList(); renderSearchMode(); });
@@ -1140,37 +985,15 @@ function setupEventListeners() {
 
     if(mobileSearchCloseBtn) mobileSearchCloseBtn.addEventListener('click', exitMobileSearchUI);
 
-    // 検索モーダル内スマホ用ヘッダーのイベント
-    const searchModeBackBtn = document.getElementById('searchModeBackBtn');
-    const searchModeMobileInput = document.getElementById('searchModeMobileInput');
-    const searchModeMobileClearBtn = document.getElementById('searchModeMobileClearBtn');
-    if(searchModeBackBtn) searchModeBackBtn.addEventListener('click', () => exitSearchMode());
-    if(searchModeMobileInput) {
-        searchModeMobileInput.addEventListener('input', (e) => {
-            currentSearch = e.target.value.toLowerCase();
-            const hasVal = !!e.target.value;
-            if(searchModeMobileClearBtn) searchModeMobileClearBtn.classList.toggle('hidden', !hasVal);
-            renderSearchMode();
-        });
-    }
-    if(searchModeMobileClearBtn) searchModeMobileClearBtn.addEventListener('click', () => {
-        currentSearch = '';
-        if(searchModeMobileInput) { searchModeMobileInput.value = ''; searchModeMobileInput.focus(); }
-        searchModeMobileClearBtn.classList.add('hidden');
-        renderSearchMode();
-    });
-
     if(searchInput) searchInput.addEventListener('focus', () => {
-        if (window.innerWidth <= 768) {
-            searchInput.blur(); // サイドバーの検索バーはすぐblur
-            enterSearchMode(); // フルスクリーン検索を開く
-        } else {
-            enterSearchMode();
-        }
+        if (window.innerWidth > 768) { enterSearchMode(); }
+        else { enterMobileSearchUI(); }
     });
     if(searchInput) searchInput.addEventListener('input', (e) => {
-        const hasVal = !!e.target.value;
-        if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !hasVal);
+        if(window.innerWidth <= 768) {
+            const hasVal = !!e.target.value;
+            if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !hasVal);
+        }
     });
     if(searchInput) searchInput.addEventListener('blur', () => {
         if(window.innerWidth > 768) sidebarTagsContainer.classList.remove('show');
@@ -1553,38 +1376,7 @@ function updateCurrentMemo() {
     }
 }
 
-function togglePin() {
-    const m = memos.find(x => x.id === currentMemoId);
-    if(m && !m.isTrashed) {
-        const wasPinned = m.isPinned;
-        m.isPinned = !m.isPinned;
-        m.updatedAt = new Date().toISOString();
-        cloudSaveMemo(m);
-        renderMemoList();
-        updateMainActionButtons(m);
-        // ツールバーのピンアイコンの色を更新
-        if(mobilePinBtn) {
-            const pinIcon = mobilePinBtn.querySelector('.material-symbols-rounded');
-            if(pinIcon) pinIcon.style.color = m.isPinned ? 'var(--accent-color)' : '';
-            mobilePinBtn.title = m.isPinned ? 'ピンを外す' : 'ピン留め';
-        }
-        showToastWithUndo(
-            m.isPinned ? 'ピン留めしました' : 'ピンを外しました',
-            () => {
-                m.isPinned = wasPinned;
-                m.updatedAt = new Date().toISOString();
-                cloudSaveMemo(m);
-                renderMemoList();
-                updateMainActionButtons(m);
-                if(mobilePinBtn) {
-                    const pinIcon = mobilePinBtn.querySelector('.material-symbols-rounded');
-                    if(pinIcon) pinIcon.style.color = m.isPinned ? 'var(--accent-color)' : '';
-                    mobilePinBtn.title = m.isPinned ? 'ピンを外す' : 'ピン留め';
-                }
-            }
-        );
-    }
-}
+function togglePin() { const m = memos.find(x => x.id === currentMemoId); if(m && !m.isTrashed){ m.isPinned = !m.isPinned; m.updatedAt = new Date().toISOString(); cloudSaveMemo(m); renderMemoList(); updateMainActionButtons(m); } }
 
 // ==========================================
 // プロンプト庫
@@ -1717,22 +1509,16 @@ function copyPrompt(id) {
 }
 
 function finishPromptCopy(m, text, aiDest) {
-    const attachments = (m.attachments || []).filter(a => a && !a.deletedAt);
-    // 添付がある場合のみBundle化（XML）してコピー。添付がなければ従来通りプレーンテキストのまま。
-    const hasAttachments = attachments.length > 0;
-    const copyText = hasAttachments ? XMLRenderer(generateBundle(text, attachments)) : text;
-
-    copyTextWithFallback(copyText, () => {
+    navigator.clipboard.writeText(text).then(() => {
         m.useCount = (m.useCount || 0) + 1;
         cloudSaveMemo(m);
         renderMemoList();
         const dest = aiDest && AI_DESTINATIONS[aiDest];
-        const attachNote = hasAttachments ? `／添付${attachments.length}件は手動で貼り付けてください` : '';
         if (dest) {
-            showToast(`コピーしました — ${dest.name}を開きます（Ctrl+Vで貼り付け）${attachNote}`, 'bolt');
+            showToast(`コピーしました — ${dest.name}を開きます（Ctrl+Vで貼り付け）`, 'bolt');
             window.open(dest.url, '_blank');
         } else {
-            showToast(`コピーしました（${m.useCount}回目）${attachNote}`, 'bolt');
+            showToast(`コピーしました（${m.useCount}回目）`, 'bolt');
         }
     });
 }
@@ -1770,48 +1556,28 @@ function renderQuickPromptBar() {
 let searchModeActive = false;
 
 function enterSearchMode() {
+    if (window.innerWidth <= 768) return;
     const view = document.getElementById('searchModeView');
     if (!view) return;
     searchModeActive = true;
     view.classList.remove('hidden');
-    if (window.innerWidth > 768) {
-        document.getElementById('mainContent')?.classList.add('search-mode');
-        if (!isSidebarPinned) {
-            document.body.classList.add('sidebar-pinned', 'sidebar-search-auto-pinned');
-        }
+    document.getElementById('mainContent')?.classList.add('search-mode');
+    // サイドバーが固定されていなければ自動でピン固定する
+    if (!isSidebarPinned) {
+        document.body.classList.add('sidebar-pinned', 'sidebar-search-auto-pinned');
     }
     renderSearchMode();
-    // フォーカスをモーダル内inputへ
-    setTimeout(() => {
-        if (window.innerWidth <= 768) {
-            const mobileInput = document.getElementById('searchModeMobileInput');
-            if(mobileInput) mobileInput.focus();
-        } else {
-            const input = document.getElementById('searchModeInput');
-            if(input) input.focus();
-        }
-    }, 80);
 }
 
 function exitSearchMode() {
-    const view = document.getElementById('searchModeView');
-    if (!view || view.classList.contains('hidden')) return;
+    if (!searchModeActive) return;
     searchModeActive = false;
-    view.classList.add('hidden');
+    document.getElementById('searchModeView')?.classList.add('hidden');
     document.getElementById('mainContent')?.classList.remove('search-mode');
     // 検索時だけ自動固定したサイドバーを元に戻す
     if (document.body.classList.contains('sidebar-search-auto-pinned')) {
         document.body.classList.remove('sidebar-pinned', 'sidebar-search-auto-pinned');
     }
-    // スマホ旧UIのリセット（念のため）
-    const sidebarHeader = document.querySelector('.sidebar-header');
-    const sidebarActionsGrid = document.querySelector('.sidebar-actions-grid');
-    if(sidebarHeader) sidebarHeader.classList.remove('search-hidden');
-    if(sidebarActionsGrid) sidebarActionsGrid.classList.remove('search-hidden');
-    const filterSortRow = document.querySelector('.filter-sort-row');
-    if(filterSortRow) filterSortRow.classList.remove('search-hidden');
-    const sidebarTagsContainer = document.querySelector('.sidebar-tags-container');
-    if(sidebarTagsContainer) sidebarTagsContainer.classList.remove('show');
     // 検索クリア
     currentSearch = '';
     if(searchInput) { searchInput.value = ''; }
@@ -1881,6 +1647,23 @@ function renderSearchMode() {
     const labelEl = document.getElementById('searchModeResultLabel');
     if (!tagsEl || !resultsEl) return;
 
+    // プロンプトチップ
+    const promptsEl = document.getElementById('searchModePrompts');
+    const promptSection = document.getElementById('searchModePromptSection');
+    if (promptsEl) {
+        promptsEl.innerHTML = '';
+        const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
+            .sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 10);
+        prompts.forEach(m => {
+            const chip = document.createElement('button');
+            chip.className = 'sm-tag-chip sm-prompt-chip';
+            chip.innerHTML = `<span class="material-symbols-rounded" style="font-size:13px;vertical-align:-2px;color:var(--accent-color)">bolt</span>${escapeHtml(m.title || '無題')}${m.useCount ? `<span class="sm-prompt-count">${m.useCount}</span>` : ''}`;
+            chip.addEventListener('click', () => { exitSearchMode(); selectMemo(m.id); });
+            promptsEl.appendChild(chip);
+        });
+        if (promptSection) promptSection.style.display = prompts.length === 0 ? 'none' : '';
+    }
+
     // タグチップ（横スクロール行）
     const allTags = new Set();
     memos.forEach(m => { if (!m.isTrashed && !m.isPrivate) { extractTags(m.content).forEach(t => allTags.add(t)); } });
@@ -1903,74 +1686,42 @@ function renderSearchMode() {
     });
     if (allTags.size === 0) tagsEl.innerHTML = '<p class="sm-empty">タグはまだありません。</p>';
 
-    // 検索・タグフィルタ条件
-    const filterMemo = (m) => {
+    // 検索条件に合致するメモ一覧
+    const results = memos.filter(m => !m.isTrashed && !m.isPrivate).filter(m => {
         const titleEmpty = !(m.title || '').trim();
         const bodyEmpty = !(m.content || '').replace(/<[^>]*>/g, '').trim();
         if (titleEmpty && bodyEmpty) return false;
-        if (m.isTrashed || m.isPrivate) return false;
+        // テキスト検索
         if (currentSearch) {
             const plainText = m.content.replace(/<[^>]*>/g, '').toLowerCase();
             if (!(m.title || '').toLowerCase().includes(currentSearch) && !plainText.includes(currentSearch)) return false;
         }
+        // 複数タグ検索
         if (selectedTags.length > 0) {
             const memoTags = extractTags(m.content).map(t => t.toLowerCase());
-            if (tagSearchMode === 'and') return selectedTags.every(t => memoTags.includes(t.toLowerCase()));
-            else return selectedTags.some(t => memoTags.includes(t.toLowerCase()));
+            if (tagSearchMode === 'and') {
+                return selectedTags.every(t => memoTags.includes(t.toLowerCase()));
+            } else {
+                return selectedTags.some(t => memoTags.includes(t.toLowerCase()));
+            }
         }
         return true;
-    };
+    }).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
-    // ---- プロンプトのみセクション ----
-    const promptOnlySection = document.getElementById('searchModePromptOnlySection');
-    const promptResultsEl = document.getElementById('searchModePromptResults');
-    const promptLabel = document.getElementById('searchModePromptLabel');
-    const promptResults = memos.filter(m => m.isPrompt && filterMemo(m))
-        .sort((a, b) => (b.useCount || 0) - (a.useCount || 0));
-    if (promptOnlySection && promptResultsEl) {
-        promptOnlySection.style.display = promptResults.length === 0 ? 'none' : '';
-        if (promptLabel) promptLabel.textContent = `⚡ プロンプト（${promptResults.length}件）`;
-        promptResultsEl.innerHTML = '';
-        promptResults.forEach(m => {
-            const card = document.createElement('div');
-            card.className = 'sm-card sm-card-prompt';
-            const preview = m.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
-            card.innerHTML = `
-                <div class="sm-card-title">
-                    <span class="material-symbols-rounded sm-bolt">bolt</span>
-                    ${m.isPinned ? '<span class="material-symbols-rounded sm-pin">push_pin</span>' : ''}
-                    <span>${escapeHtml(m.title || '無題')}</span>
-                    ${m.useCount ? `<span class="sm-card-count">${m.useCount}回</span>` : ''}
-                </div>
-                <p class="sm-card-preview">${escapeHtml(preview)}</p>`;
-            card.addEventListener('click', () => {
-                exitSearchMode();
-                setFilter('prompt');
-                setTimeout(() => selectMemo(m.id), 100);
-            });
-            promptResultsEl.appendChild(card);
-        });
-    }
-
-    // ---- すべてのメモセクション ----
-    const results = memos.filter(m => !m.isPrompt && filterMemo(m))
-        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-
+    // ラベル
     let labelText = '';
     if (selectedTags.length > 0) {
         labelText = `${selectedTags.map(t=>`#${t}`).join(` ${tagSearchMode.toUpperCase()} `)} の結果（${results.length}件）`;
     } else if (currentSearch) {
-        labelText = `「${searchInput ? searchInput.value : currentSearch}」のメモ（${results.length}件）`;
+        labelText = `「${searchInput ? searchInput.value : currentSearch}」の検索結果（${results.length}件）`;
     } else {
         labelText = `すべてのメモ（${results.length}件）`;
     }
     if (labelEl) labelEl.textContent = labelText;
-    if (labelEl) labelEl.style.display = results.length === 0 && promptResults.length > 0 ? 'none' : '';
 
     resultsEl.innerHTML = '';
-    if (results.length === 0 && promptResults.length === 0) {
+    if (results.length === 0) {
         resultsEl.innerHTML = '<p class="sm-empty">該当するメモがありません。</p>';
-        if (labelEl) labelEl.style.display = '';
         return;
     }
     results.forEach(m => {
@@ -1979,6 +1730,7 @@ function renderSearchMode() {
         const preview = m.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
         card.innerHTML = `
             <div class="sm-card-title">
+                ${m.isPrompt ? '<span class="material-symbols-rounded sm-bolt">bolt</span>' : ''}
                 ${m.isPinned ? '<span class="material-symbols-rounded sm-pin">push_pin</span>' : ''}
                 <span>${escapeHtml(m.title || '無題のメモ')}</span>
             </div>
@@ -2135,11 +1887,10 @@ function directPrivate(id) {
 async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
 
 // プロンプト共有URL生成
-async function showSharePreview(shareId, isLoggedIn = false) {
+async function showSharePreview(shareId) {
     const previewScreen = document.getElementById('sharePreviewScreen');
     const loginScreen = document.getElementById('loginScreen');
     if(loginScreen) loginScreen.classList.add('hidden');
-    if(isLoggedIn && appContainer) appContainer.classList.add('hidden');
     if(previewScreen) previewScreen.classList.remove('hidden');
 
     try {
@@ -2159,65 +1910,25 @@ async function showSharePreview(shareId, isLoggedIn = false) {
         const data = snap.data();
         const titleEl = document.getElementById('sharePreviewTitle');
         const contentEl = document.getElementById('sharePreviewContent');
-        // 改行を保持してプレーンテキスト化
-        const displayText = (data.content || '')
-            .replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
-            .replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ')
-            .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-            .replace(/\n{3,}/g, '\n\n').trim();
         if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
-        if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
+        if(contentEl) contentEl.textContent = (data.content || '').replace(/<[^>]*>/g, '').trim();
 
-        // 改変可否バッジ
-        if(titleEl && data.allowRemix === false) {
-            const badge = document.createElement('span');
-            badge.style.cssText = 'display:inline-block;margin-left:8px;font-size:11px;padding:2px 8px;border-radius:99px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-weight:600;vertical-align:middle;';
-            badge.textContent = '改変禁止';
-            titleEl.appendChild(badge);
-        }
-
-        // コピーボタン（未ログイン含む誰でも）→ previewCopyCountを計測
+        // コピーボタン
         const copyBtn = document.getElementById('sharePreviewCopyBtn');
         if(copyBtn) copyBtn.addEventListener('click', () => {
-            navigator.clipboard.writeText(displayText).then(() => {
+            const text = (data.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+            navigator.clipboard.writeText(text).then(() => {
                 copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピーしました';
                 setTimeout(() => { copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピーする'; }, 2000);
-                // キラカード育成：プレビューコピーを共有元に還流（重み弱）
-                updateDoc(ref, { previewCopyCount: increment(1) }).catch(() => {});
             });
         });
 
-        // 保存ボタン：ログイン済みなら即インポート、未ログインならログイン画面へ
+        // 追加ボタン → ログイン画面へ
         const importBtn = document.getElementById('sharePreviewImportBtn');
-        if(importBtn) {
-            importBtn.innerHTML = isLoggedIn
-                ? '<span class="material-symbols-rounded">download</span> 保存する'
-                : '<span class="material-symbols-rounded">login</span> ログインして保存';
-            importBtn.addEventListener('click', async () => {
-                if(isLoggedIn) {
-                    previewScreen?.classList.add('hidden');
-                    appContainer?.classList.remove('hidden');
-                    await importSharedPrompt(shareId);
-                } else {
-                    sessionStorage.setItem('pendingShareId', shareId);
-                    previewScreen?.classList.add('hidden');
-                    loginScreen?.classList.remove('hidden');
-                }
-            });
-        }
-
-        // ログイン済み用：保存せず閉じるリンクを追加
-        if(isLoggedIn && previewScreen && !document.getElementById('sharePreviewSkipBtn')) {
-            const skip = document.createElement('button');
-            skip.id = 'sharePreviewSkipBtn';
-            skip.textContent = '保存せずに閉じる';
-            skip.style.cssText = 'display:block;margin:14px auto 0;background:none;border:none;color:var(--text-secondary);font-size:13px;cursor:pointer;text-decoration:underline;font-family:inherit;';
-            skip.addEventListener('click', () => {
-                previewScreen.classList.add('hidden');
-                appContainer?.classList.remove('hidden');
-            });
-            (importBtn?.parentElement || previewScreen).appendChild(skip);
-        }
+        if(importBtn) importBtn.addEventListener('click', () => {
+            previewScreen?.classList.add('hidden');
+            loginScreen?.classList.remove('hidden');
+        });
 
     } catch(e) {
         const contentEl = document.getElementById('sharePreviewContent');
@@ -2268,16 +1979,7 @@ function applyVarSubstitution(text, selectedFindings) {
 // 共有プレビュー＆変数化サジェストモーダル
 // ==========================================
 function openShareReviewModal(memo) {
-    // <br>や<p>タグを改行に変換してから他のタグを除去（改行を保持）
-    const plainText = memo.content
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<\/div>/gi, '\n')
-        .replace(/<[^>]*>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-        .replace(/\n{3,}/g, '\n\n')  // 3行以上の連続改行は2行に
-        .trim();
+    const plainText = memo.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const findings = detectSensitiveInfo(plainText);
 
     // 確実に検出できるもの（自動変換）と、あいまいなもの（タップで変換）を分ける
@@ -2309,16 +2011,6 @@ function openShareReviewModal(memo) {
             `}
             <div class="share-review-preview-label">タップして編集できます</div>
             <div class="share-review-live-text" id="shareReviewLiveText"></div>
-            <div class="share-review-remix-row">
-                <label class="share-review-remix-label">
-                    <input type="checkbox" id="shareRemixAllowed" checked>
-                    <span class="share-review-remix-text">
-                        <span class="material-symbols-rounded">edit</span>
-                        改変・再利用を許可する
-                    </span>
-                </label>
-                <p class="share-review-remix-hint">オフにすると受け取った人に「改変禁止」と表示されます</p>
-            </div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">rocket_launch</span> この状態でシェアする</button>
@@ -2437,9 +2129,8 @@ function openShareReviewModal(memo) {
     modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
         const finalText = getFinalText();
-        const allowRemix = modal.querySelector('#shareRemixAllowed')?.checked !== false;
         closeModal();
-        await doSharePrompt(memo, finalText, allowRemix);
+        await doSharePrompt(memo, finalText);
     });
 }
 
@@ -2447,7 +2138,7 @@ async function sharePrompt(memo) {
     openShareReviewModal(memo);
 }
 
-async function doSharePrompt(memo, overrideContent, allowRemix = true) {
+async function doSharePrompt(memo, overrideContent) {
     try {
         if(!currentUser) { showToast('ログインが必要です', 'error'); return; }
         const shareData = {
@@ -2458,8 +2149,6 @@ async function doSharePrompt(memo, overrideContent, allowRemix = true) {
             uid: currentUser.uid,
             importCount: 0,
             useCount: 0,
-            previewCopyCount: 0,
-            allowRemix: allowRemix,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
         const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);
@@ -2505,8 +2194,6 @@ async function importSharedPrompt(shareId) {
             isPrompt: true, useCount: 0,
             archived: false, isPinned: false, isPrivate: false, isTrashed: false,
             createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-            // 共有元への還流に使う（uid/docId形式で保存）
-            sharedRef: uid ? `${uid}/${docId}` : docId,
         };
         memos.unshift(newMemo); cloudSaveMemo(newMemo); renderMemoList(); selectMemo(newMemo.id);
         showToast(`「${data.title}」をインポートしました`, 'download');
@@ -2603,25 +2290,18 @@ function applySettings() {
     const qpWrap = document.getElementById('quickPromptBarWrap');
     if(qpWrap) qpWrap.classList.toggle('hidden', !qpOpen);
 }
-// キラカード レアリティ判定
-// 成長値 = importCount×2 + useCount×3 + previewCopyCount×1
-// 「保存して繰り返し使ってくれる人」が最も価値が高く、通りすがりのコピーは軽い重み
-function getRarity(growthScore) {
-    if (growthScore >= 60) return { level: 'gold',   label: '🥇 GOLD',   class: 'rarity-gold' };
-    if (growthScore >= 20) return { level: 'silver', label: '🥈 SILVER', class: 'rarity-silver' };
-    if (growthScore >= 5)  return { level: 'bronze', label: '🥉 BRONZE', class: 'rarity-bronze' };
+function getRarity(count) {
+    if (count >= 30) return { level: 'gold',   label: '🥇 GOLD',   class: 'rarity-gold' };
+    if (count >= 10) return { level: 'silver', label: '🥈 SILVER', class: 'rarity-silver' };
+    if (count >= 3)  return { level: 'bronze', label: '🥉 BRONZE', class: 'rarity-bronze' };
     return { level: 'normal', label: '', class: 'rarity-normal' };
 }
-function calcGrowthScore(data) {
-    return (data.importCount || 0) * 2 + (data.useCount || 0) * 3 + (data.previewCopyCount || 0) * 1;
-}
 
-function renderPromptHub(query = '', activeTag = null) {
+function renderPromptHub(query = '') {
     const list = document.getElementById('promptHubList');
     if(!list) return;
     const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
         .filter(m => !query || (m.title||'').toLowerCase().includes(query) || m.content.replace(/<[^>]*>/g,'').toLowerCase().includes(query))
-        .filter(m => !activeTag || extractTags(m.content).includes(activeTag))
         .sort((a, b) => (b.useCount||0) - (a.useCount||0));
     if(prompts.length === 0) {
         list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
@@ -2631,15 +2311,14 @@ function renderPromptHub(query = '', activeTag = null) {
     prompts.forEach(m => {
         const tags = extractTags(m.content);
         const preview = m.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0, 80);
-        // レアリティは「自分がコピーした回数」ではなく、共有経由で他者に使われた回数（インポート数＋インポート先での使用数）で判定する。
-        // 未共有のプロンプトは常にノーマル表示。共有済みなら統計を非同期取得してから確定する。
-        const rarity = getRarity(0);
+        const totalCount = (m.useCount||0);
+        const rarity = getRarity(totalCount);
         const card = document.createElement('div');
         card.className = `prompt-hub-card ${rarity.class}`;
         card.innerHTML = `
             <div class="phc-card-head">
                 <span class="material-symbols-rounded phc-bolt">bolt</span>
-                <span id="rarityBadge_${m.id}"></span>
+                ${rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : ''}
             </div>
             <div class="phc-left" data-id="${m.id}">
                 <div class="phc-title">${escapeHtml(m.title||'無題')}</div>
@@ -2695,33 +2374,18 @@ function renderPromptHub(query = '', activeTag = null) {
         // カード左クリックで編集
         card.querySelector('.phc-left').addEventListener('click', () => { setFilter('all'); selectMemo(m.id); });
         list.appendChild(card);
-        // 共有統計を非同期取得（インポート数＋インポート先での使用数 → レアリティに反映）
+        // 共有統計を非同期取得
         if (m.sharedRef) {
             (async () => {
                 try {
-                    // sharedRefは「uid/docId」形式。共有元のuidでFirestoreを参照する
-                    const parts = m.sharedRef.split('/');
-                    const refUid = parts.length >= 2 ? parts[0] : currentUser.uid;
-                    const refDocId = parts.length >= 2 ? parts[1] : parts[0];
-                    const snap = await getDoc(doc(db, 'users', refUid, 'sharedPrompts', refDocId));
+                    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'sharedPrompts', m.sharedRef));
                     const statsEl = document.getElementById(`shareStats_${m.id}`);
-                    if (snap.exists()) {
+                    if (snap.exists() && statsEl) {
                         const data = snap.data();
                         const importCount = data.importCount || 0;
-                        const previewCopies = data.previewCopyCount || 0;
-                        if (statsEl) {
-                            const statParts = [];
-                            if (importCount > 0) statParts.push(`${importCount}人が保存`);
-                            if (previewCopies > 0) statParts.push(`${previewCopies}回コピー`);
-                            statsEl.innerHTML = statParts.length > 0
-                                ? `<span class="material-symbols-rounded">group</span>${statParts.join('・')}`
-                                : `<span class="material-symbols-rounded">share</span>共有中`;
-                        }
-                        const rarity = getRarity(calcGrowthScore(data));
-                        card.classList.remove('rarity-normal', 'rarity-bronze', 'rarity-silver', 'rarity-gold');
-                        card.classList.add(rarity.class);
-                        const badgeEl = document.getElementById(`rarityBadge_${m.id}`);
-                        if (badgeEl) badgeEl.innerHTML = rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : '';
+                        statsEl.innerHTML = importCount > 0
+                            ? `<span class="material-symbols-rounded">group</span>${importCount}人にインポートされました`
+                            : `<span class="material-symbols-rounded">share</span>共有中`;
                     }
                 } catch(e) {}
             })();
@@ -2754,15 +2418,11 @@ function setFilter(filter) {
         promptHubView?.classList.remove('hidden');
         editorContainer?.classList.add('hidden');
         renderPromptHub();
-        showMobileEditor(); // スマホでもmainContentを表示（promptHubViewはその中にある）
     } else {
         promptHubView?.classList.add('hidden');
         editorContainer?.classList.remove('hidden');
     }
-    exitMultiSelect();
-    // promptフィルタ以外はスマホでサイドバーに戻す。promptはshowMobileEditorで対応済みなのでここではスキップ
-    if(filter !== 'prompt') showMobileList();
-    renderMemoList();
+    exitMultiSelect(); showMobileList(); renderMemoList();
 }
 
 function getFilteredMemos() {

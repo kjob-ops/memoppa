@@ -243,7 +243,6 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .prompt-var-row { margin-bottom: 12px; }
 .prompt-var-row label { display: block; font-size: 13px; font-weight: bold; color: var(--accent-color); margin-bottom: 4px; }
 .prompt-var-preview { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12px; color: var(--text-secondary); white-space: pre-wrap; max-height: 160px; overflow-y: auto; margin-bottom: 16px; line-height: 1.6; }
-.copy-fallback-textarea { width: 100%; min-height: 220px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; font-size: 12px; color: var(--text-primary); font-family: ui-monospace, "SF Mono", Menlo, monospace; line-height: 1.6; resize: vertical; box-sizing: border-box; }
 .prompt-var-copy { width: 100%; justify-content: center; background: var(--accent-color) !important; color: white !important; border-color: var(--accent-color) !important; font-weight: bold; }
 .prompt-empty-state { text-align: center; padding: 40px 24px; color: var(--text-secondary); }
 .prompt-empty-state .material-symbols-rounded { font-size: 40px; color: var(--accent-color); opacity: 0.5; margin-bottom: 8px; }
@@ -317,15 +316,10 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .search-mode-mobile-input-wrap { flex: 1; display: flex; align-items: center; background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 6px 8px 6px 12px; }
 .search-mode-mobile-input-wrap .search-input { border: none; background: none; }
 .search-mode-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-.search-mode-section { margin-bottom: 4px; }
-.sm-prompt-results { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 .sm-card { border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; cursor: pointer; transition: 0.15s; background: var(--bg-sidebar); display: flex; flex-direction: column; gap: 6px; }
 .sm-card:hover { border-color: var(--accent-color); transform: translateY(-1px); box-shadow: var(--shadow); }
-.sm-card-prompt { border-color: rgba(15,110,86,0.2); background: var(--bg-hover); }
-.sm-card-prompt:hover { border-color: var(--accent-color); }
 .sm-card-title { display: flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--text-primary); min-width: 0; }
 .sm-card-title span:last-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sm-card-count { font-size: 11px; color: var(--accent-color); font-weight: 600; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 .sm-bolt { font-size: 14px !important; color: var(--accent-color); flex-shrink: 0; }
 .sm-pin { font-size: 14px !important; color: var(--pin-color); flex-shrink: 0; }
 .sm-card-preview { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.8em; }
@@ -490,16 +484,9 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     
     .app-container.sp-view-editor .sidebar { display: none !important; }
     .app-container.sp-view-editor .main-content { display: flex !important; }
-    .search-mode-view { position: fixed; top: 0; left: 0; right: 0; bottom: 0; padding: 0; z-index: 1002; align-items: stretch; background: var(--bg-primary); }
-    .search-mode-inner { border-radius: 0; max-height: 100dvh; height: 100dvh; padding: 0; box-shadow: none; display: flex; flex-direction: column; overflow-y: auto; }
-    .search-mode-header.pc-only { display: none !important; }
-    .search-mode-header-mobile { padding: 12px 16px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; background: var(--bg-primary); position: sticky; top: 0; z-index: 10; }
-    .search-mode-chip-section { padding: 8px 16px 0; }
-    .search-mode-section { padding: 0 16px; }
-    #searchModeResultLabel { padding: 0 16px; }
-    #searchModeResults { padding: 0 16px 16px; }
+    .search-mode-view { position: fixed; padding: 12px 16px 24px; z-index: 1002; }
     .search-mode-results { grid-template-columns: 1fr; }
-    .sm-prompt-results { grid-template-columns: 1fr; }
+    .search-mode-view { padding: 12px 16px 24px; }
     .search-mode-view.has-query #searchModeTagSection, .search-mode-view.has-query #searchModePromptSection { display: none !important; }
     
     .checkbox-wrapper { display: none; }
@@ -723,23 +710,6 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .tag-list-check { font-size: 18px; color: var(--accent-color); }
 
 /* プロンプトハブビュー */
-.prompt-hub-back-btn { display: none; width: 36px; height: 36px; border: none; background: none; color: var(--text-primary); cursor: pointer; border-radius: var(--radius-md); align-items: center; justify-content: center; flex-shrink: 0; }
-.prompt-hub-back-btn .material-symbols-rounded { font-size: 22px; }
-@media (max-width: 768px) {
-    .prompt-hub-back-btn { display: flex; }
-}
-/* タグアコーディオン */
-.phub-tag-accordion { border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
-.phub-tag-toggle { width: 100%; display: flex; align-items: center; gap: 6px; padding: 8px 16px; background: none; border: none; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); font-family: inherit; transition: background 0.15s; }
-.phub-tag-toggle:hover { background: var(--bg-hover); }
-.phub-tag-toggle .material-symbols-rounded { font-size: 16px; }
-.phub-tag-arrow { margin-left: auto; font-size: 18px !important; transition: transform 0.2s; }
-.phub-tag-panel { padding: 8px 16px 12px; }
-.phub-tag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.phub-tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border: 1px solid var(--border-color); border-radius: 99px; background: var(--bg-hover); color: var(--text-secondary); font-size: 12px; cursor: pointer; transition: 0.15s; font-family: inherit; }
-.phub-tag-chip:hover { border-color: var(--accent-color); color: var(--accent-color); }
-.phub-tag-chip.active { border-color: var(--accent-color); background: var(--accent-color); color: white; }
-.phub-tag-cnt { font-size: 10px; opacity: 0.7; }
 .prompt-hub-view { flex: 1; display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 .prompt-hub-view.hidden { display: none; }
 .prompt-hub-header { padding: 16px 24px 12px; border-bottom: 0.5px solid var(--border-color); flex-shrink: 0; display: flex; align-items: center; gap: 16px; }
@@ -841,12 +811,6 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-review-preview-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .share-review-preview { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; font-size: 12.5px; color: #374151; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular','Consolas',monospace; white-space: pre-wrap; word-break: break-word; }
 .share-review-actions { display: flex; gap: 10px; }
-.share-review-remix-row { margin: 12px 0 8px; padding: 10px 12px; background: var(--bg-hover); border-radius: var(--radius-md); }
-.share-review-remix-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text-primary); }
-.share-review-remix-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-color); cursor: pointer; flex-shrink: 0; }
-.share-review-remix-text { display: flex; align-items: center; gap: 5px; }
-.share-review-remix-text .material-symbols-rounded { font-size: 16px; color: var(--accent-color); }
-.share-review-remix-hint { font-size: 11px; color: var(--text-secondary); margin: 4px 0 0 24px; }
 .share-review-cancel { flex: 1; padding: 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-hover); color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-color); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
 .share-review-confirm:hover { filter: brightness(1.08); }
@@ -857,7 +821,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 
 /* ========== キラカード レアリティ ========== */
 /* POPOPO体験：タップ変数化モーダル */
-.share-review-live-text { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; font-size: 14px; color: #374151; line-height: 2; min-height: 120px; max-height: 220px; overflow-y: auto; margin-bottom: 18px; word-break: break-word; white-space: pre-wrap; }
+.share-review-live-text { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; font-size: 14px; color: #374151; line-height: 2; min-height: 120px; max-height: 220px; overflow-y: auto; margin-bottom: 18px; word-break: break-word; }
 .sr-var-chip { display: inline-block; background: #fbbf24; color: #1e1b4b; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; font-family: monospace; cursor: pointer; margin: 0 2px; vertical-align: baseline; }
 .sr-var-chip:hover { filter: brightness(1.05); }
 .sr-tappable { border-bottom: 2px dashed #f59e0b; cursor: pointer; padding: 1px 2px; transition: background 0.15s; }
@@ -895,22 +859,28 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .rarity-normal { border-color: var(--border-color); }
 
 /* ブロンズ（3〜9回） */
-.rarity-bronze { border-color: #d97706; box-shadow: inset 0 0 0 3px rgba(217,119,6,0.14); }
-.rarity-bronze:hover { box-shadow: inset 0 0 0 3px rgba(217,119,6,0.14), 0 8px 22px rgba(217,119,6,0.18); }
+.rarity-bronze { border-color: #d97706 !important; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important; }
+.rarity-bronze .phc-bolt { color: #b45309 !important; }
 .rarity-bronze-badge { background: linear-gradient(90deg, #d97706, #b45309); color: white; }
 
 /* シルバー（10〜29回） */
-.rarity-silver { border-color: #94a3b8; box-shadow: inset 0 0 0 3px rgba(148,163,184,0.16); }
-.rarity-silver:hover { box-shadow: inset 0 0 0 3px rgba(148,163,184,0.16), 0 8px 22px rgba(148,163,184,0.2); }
+.rarity-silver { border-color: #94a3b8 !important; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important; box-shadow: 0 0 12px rgba(148,163,184,0.25) !important; }
+.rarity-silver .phc-bolt { color: #64748b !important; }
 .rarity-silver-badge { background: linear-gradient(90deg, #94a3b8, #64748b); color: white; }
 
 /* ゴールド（30回〜） */
 @keyframes gold-shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-.rarity-gold { border-color: #fbbf24; box-shadow: inset 0 0 0 3px rgba(251,191,36,0.18); }
-.rarity-gold:hover { box-shadow: inset 0 0 0 3px rgba(251,191,36,0.18), 0 8px 26px rgba(251,191,36,0.26); }
-.rarity-gold-badge { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); background-size: 200%; color: #78350f; animation: gold-shimmer 2.5s linear infinite; }
+.rarity-gold { border-color: #fbbf24 !important; background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%) !important; box-shadow: 0 0 20px rgba(251,191,36,0.3) !important; }
+.rarity-gold .phc-title { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); background-size: 200%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: gold-shimmer 3s linear infinite; }
+.rarity-gold .phc-preview { color: #94a3b8 !important; }
+.rarity-gold .phc-count { color: #fbbf24 !important; opacity: 0.9; }
+.rarity-gold .phc-bolt { color: #fbbf24 !important; }
+.rarity-gold .phc-tag { background: rgba(251,191,36,0.1); border-color: rgba(251,191,36,0.3); color: #fde68a; }
+.rarity-gold .phc-actions { border-top-color: rgba(251,191,36,0.2); }
+.rarity-gold .phc-share-btn, .rarity-gold .phc-edit-btn { background: rgba(255,255,255,0.06); border-color: rgba(251,191,36,0.3); color: #fbbf24; }
+.rarity-gold-badge { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); background-size: 200%; color: #1e1b4b; animation: gold-shimmer 2.5s linear infinite; }
 
 /* スマホは1列 */
 @media (max-width: 768px) {
-    .prompt-hub-list { grid-template-columns: 1fr; padding: 12px; padding-bottom: 80px; }
+    .prompt-hub-list { grid-template-columns: 1fr; padding: 12px; }
 }
