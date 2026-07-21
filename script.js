@@ -1141,14 +1141,11 @@ function setupEventListeners() {
     if(mobileSearchCloseBtn) mobileSearchCloseBtn.addEventListener('click', exitMobileSearchUI);
 
     if(searchInput) searchInput.addEventListener('focus', () => {
-        if (window.innerWidth > 768) { enterSearchMode(); }
-        else { enterMobileSearchUI(); }
+        enterSearchMode();
     });
     if(searchInput) searchInput.addEventListener('input', (e) => {
-        if(window.innerWidth <= 768) {
-            const hasVal = !!e.target.value;
-            if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !hasVal);
-        }
+        const hasVal = !!e.target.value;
+        if(searchClearBtn) searchClearBtn.classList.toggle('hidden', !hasVal);
     });
     if(searchInput) searchInput.addEventListener('blur', () => {
         if(window.innerWidth > 768) sidebarTagsContainer.classList.remove('show');
@@ -1770,6 +1767,15 @@ function exitSearchMode() {
     if (document.body.classList.contains('sidebar-search-auto-pinned')) {
         document.body.classList.remove('sidebar-pinned', 'sidebar-search-auto-pinned');
     }
+    // スマホ旧UIのリセット（念のため）
+    const sidebarHeader = document.querySelector('.sidebar-header');
+    const sidebarActionsGrid = document.querySelector('.sidebar-actions-grid');
+    if(sidebarHeader) sidebarHeader.classList.remove('search-hidden');
+    if(sidebarActionsGrid) sidebarActionsGrid.classList.remove('search-hidden');
+    const filterSortRow = document.querySelector('.filter-sort-row');
+    if(filterSortRow) filterSortRow.classList.remove('search-hidden');
+    const sidebarTagsContainer = document.querySelector('.sidebar-tags-container');
+    if(sidebarTagsContainer) sidebarTagsContainer.classList.remove('show');
     // 検索クリア
     currentSearch = '';
     if(searchInput) { searchInput.value = ''; }
