@@ -1,7 +1,7 @@
 {
   "name": "memoppa",
   "short_name": "memoppa",
-  "description": "新しいタブがAIの作業机になるメモ帳。プロンプトを登録して、2秒でコピー。",
+  "description": "シェアしたプロンプトの「いいね・利用数」が数字で見えるプロンプト専用メモ帳。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F6E56",
