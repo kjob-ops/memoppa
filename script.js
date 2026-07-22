@@ -143,6 +143,33 @@ const shareLinkBtn = document.getElementById('shareLinkBtn');
 // ==========================================
 // トースト通知機能
 // ==========================================
+function showShareToastWithX(url, title) {
+    showToast('共有URLをコピーしました', 'share');
+    // Xシェア促進トースト
+    const existing = document.getElementById('xShareToast');
+    if(existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'xShareToast';
+    toast.className = 'x-share-toast';
+    toast.innerHTML = `
+        <span class="x-share-toast-text">Xでシェアして反応を集めよう</span>
+        <button class="x-share-toast-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            シェアする
+        </button>
+        <button class="x-share-toast-close">&times;</button>
+    `;
+    document.body.appendChild(toast);
+    const tweetText = `「${title}」\n\nプロンプトをmemoppaで共有しました👇\n`;
+    toast.querySelector('.x-share-toast-btn').addEventListener('click', () => {
+        const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(url)}`;
+        window.open(intent, '_blank', 'noopener');
+        toast.remove();
+    });
+    toast.querySelector('.x-share-toast-close').addEventListener('click', () => toast.remove());
+    setTimeout(() => { if(document.getElementById('xShareToast')) toast.remove(); }, 12000);
+}
+
 function showToast(message, icon = 'info') {
     if(!toastContainer) return;
     const toast = document.createElement('div');
@@ -2295,6 +2322,15 @@ async function showSharePreview(shareId, isLoggedIn = false) {
             });
         });
 
+        // ---- Xシェアボタン ----
+        const xBtn = document.getElementById('sharePreviewXBtn');
+        if(xBtn) xBtn.addEventListener('click', () => {
+            const shareUrl = `${location.origin}/?share=${encodeURIComponent(shareId)}`;
+            const tweetText = `「${data.title || 'プロンプト'}」\n\nmemoppaでプロンプトが共有されています👇\n`;
+            const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
+            window.open(intent, '_blank', 'noopener');
+        });
+
         // ---- 保存ボタン（ログイン済み → 「保存する」、未ログイン → 「ログインして保存」）----
         const importBtn = document.getElementById('sharePreviewImportBtn');
         if(importBtn) {
@@ -2566,7 +2602,7 @@ async function doSharePrompt(memo, overrideContent) {
         const shareToken = `${currentUser.uid}_${ref.id}`;
         const url = `${location.origin}/?share=${btoa(shareToken)}`;
         await navigator.clipboard.writeText(url);
-        showToast('共有URLをコピーしました', 'share');
+        showShareToastWithX(url, memo.title || 'プロンプト');
         // 元のメモに共有参照を保存（統計表示のため）
         memo.sharedRef = ref.id;
         cloudSaveMemo(memo);
