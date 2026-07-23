@@ -55,11 +55,15 @@ async function handleSharePage(context, shareId, url) {
   const indexRes = await context.next();
   const html = await indexRes.text();
 
+  const ogImageUrl = `https://memoppa-og.job-komineshi.workers.dev/?title=${encodeURIComponent(title)}&preview=${encodeURIComponent(ogDesc)}`;
+
   const patched = html
     .replace(/(<title>)[^<]*(<\/title>)/, `$1${esc(ogTitle)}$2`)
     .replace(/(<meta\s+property="og:title"\s+content=")[^"]*(")/,   `$1${esc(ogTitle)}$2`)
     .replace(/(<meta\s+property="og:description"\s+content=")[^"]*(")/,`$1${esc(ogDesc)}$2`)
     .replace(/(<meta\s+property="og:url"\s+content=")[^"]*(")/,     `$1${esc(url.href)}$2`)
+    .replace(/(<meta\s+property="og:image"\s+content=")[^"]*(")/,   `$1${esc(ogImageUrl)}$2`)
+    .replace(/(<meta\s+name="twitter:image"\s+content=")[^"]*(")/,  `$1${esc(ogImageUrl)}$2`)
     .replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*(")/,  `$1${esc(ogTitle)}$2`)
     .replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,`$1${esc(ogDesc)}$2`);
 
