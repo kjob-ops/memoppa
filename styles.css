@@ -990,3 +990,14 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     padding: 0 4px;
     line-height: 1;
 }
+
+/* シェア準備モーダル：編集可能エリア */
+.share-review-live-text[contenteditable="true"] {
+    cursor: text;
+    outline: none;
+}
+.share-review-live-text[contenteditable="true"]:focus {
+    border-color: var(--accent-color, #0F6E56);
+    box-shadow: 0 0 0 2px rgba(15, 110, 86, 0.12);
+}
+.sr-var-chip { cursor: pointer; user-select: none; }

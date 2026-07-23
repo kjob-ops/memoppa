@@ -2453,8 +2453,8 @@ function openShareReviewModal(memo) {
                     個人情報らしき記述は見つかりませんでした
                 </div>
             `}
-            <div class="share-review-preview-label">タップして編集できます</div>
-            <div class="share-review-live-text" id="shareReviewLiveText"></div>
+            <div class="share-review-preview-label">タップして自由に編集できます。<code>{{変数}}</code>チップはタップで元の文字に戻せます</div>
+            <div class="share-review-live-text" id="shareReviewLiveText" contenteditable="true" spellcheck="false"></div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">rocket_launch</span> この状態でシェアする</button>
@@ -2488,11 +2488,21 @@ function openShareReviewModal(memo) {
             const varLabel = `{{${spot.varName}${suffix}}}`;
 
             if (spot.isAuto) {
-                // 自動変換済み（黄色ブロック、確定表示）
+                // 自動変換済み（黄色ブロック）— タップで元の値に戻せる
                 const chip = document.createElement('span');
                 chip.className = 'sr-var-chip sr-anim-pop';
                 chip.textContent = varLabel;
                 chip.dataset.varLabel = varLabel;
+                chip.contentEditable = 'false';
+                chip.title = 'タップで元の文字に戻す';
+                chip.addEventListener('click', () => {
+                    const back = document.createElement('span');
+                    back.className = 'sr-tappable';
+                    back.textContent = spot.value;
+                    back.dataset.varLabel = varLabel;
+                    chip.replaceWith(back);
+                    rebindTappable(back, spot, varLabel);
+                });
                 liveTextEl.appendChild(chip);
             } else {
                 // タップ可能（点線下線）
@@ -2500,11 +2510,14 @@ function openShareReviewModal(memo) {
                 tappable.className = 'sr-tappable';
                 tappable.textContent = spot.value;
                 tappable.dataset.varLabel = varLabel;
+                tappable.contentEditable = 'false';
                 tappable.addEventListener('click', () => {
                     const chip = document.createElement('span');
                     chip.className = 'sr-var-chip sr-anim-pop';
                     chip.textContent = varLabel;
                     chip.dataset.varLabel = varLabel;
+                    chip.contentEditable = 'false';
+                    chip.title = 'タップで元の文字に戻す';
                     // クリックで戻せるように
                     chip.addEventListener('click', () => {
                         const back = document.createElement('span');
@@ -2527,11 +2540,14 @@ function openShareReviewModal(memo) {
     }
 
     function rebindTappable(el, spot, varLabel) {
+        el.contentEditable = 'false';
         el.addEventListener('click', () => {
             const chip = document.createElement('span');
             chip.className = 'sr-var-chip sr-anim-pop';
             chip.textContent = varLabel;
             chip.dataset.varLabel = varLabel;
+            chip.contentEditable = 'false';
+            chip.title = 'タップで元の文字に戻す';
             chip.addEventListener('click', () => {
                 const back = document.createElement('span');
                 back.className = 'sr-tappable';
@@ -2558,13 +2574,22 @@ function openShareReviewModal(memo) {
     }
 
     function getFinalText() {
-        let result = '';
-        liveTextEl.childNodes.forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE) result += node.textContent;
-            else if (node.classList?.contains('sr-var-chip')) result += node.dataset.varLabel;
-            else if (node.classList?.contains('sr-tappable')) result += node.textContent;
-        });
-        return result;
+        function collect(node) {
+            let out = '';
+            node.childNodes.forEach(n => {
+                if (n.nodeType === Node.TEXT_NODE) { out += n.textContent; return; }
+                if (n.nodeType !== Node.ELEMENT_NODE) return;
+                if (n.classList.contains('sr-var-chip')) { out += n.dataset.varLabel; return; }
+                if (n.classList.contains('sr-tappable')) { out += n.textContent; return; }
+                if (n.tagName === 'BR') { out += '\n'; return; }
+                // contenteditableが挿入するdiv/pは改行として扱う
+                const isBlock = n.tagName === 'DIV' || n.tagName === 'P';
+                if (isBlock && out && !out.endsWith('\n')) out += '\n';
+                out += collect(n);
+            });
+            return out;
+        }
+        return collect(liveTextEl);
     }
 
     function closeModal() { modal.classList.remove('show'); setTimeout(() => modal.remove(), 250); }
