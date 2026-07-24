@@ -2443,8 +2443,8 @@ function openShareReviewModal(memo) {
                 <div class="share-review-alert">
                     <span class="material-symbols-rounded">auto_awesome</span>
                     <div>
-                        <strong id="shareReviewAlertText">あなたのメモをテンプレートに変えています…</strong>
-                        <p>下線の単語をタップすると <code>{{変数}}</code> に変わります。受け取った人がそのまま穴埋めして使えます。</p>
+                        <strong id="shareReviewAlertText">個人情報を <code>{{変数}}</code> に置き換えました</strong>
+                        <p>受け取った人が自分の情報で穴埋めして使えます。チップをタップすると元に戻せます。</p>
                     </div>
                 </div>
             ` : `
@@ -2453,11 +2453,11 @@ function openShareReviewModal(memo) {
                     個人情報らしき記述は見つかりませんでした
                 </div>
             `}
-            <div class="share-review-preview-label">タップして自由に編集できます。<code>{{変数}}</code>チップはタップで元の文字に戻せます</div>
+            <div class="share-review-preview-label">タップして自由に編集できます</div>
             <div class="share-review-live-text" id="shareReviewLiveText" contenteditable="true" spellcheck="false"></div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
-                <button class="share-review-confirm"><span class="material-symbols-rounded">rocket_launch</span> この状態でシェアする</button>
+                <button class="share-review-confirm"><span class="material-symbols-rounded">share</span> 共有URLを発行</button>
             </div>
         </div>`;
     document.body.appendChild(modal);
@@ -2598,8 +2598,56 @@ function openShareReviewModal(memo) {
     modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
         const finalText = getFinalText();
-        closeModal();
-        await doSharePrompt(memo, finalText);
+        const url = await doSharePrompt(memo, finalText);
+        if (!url) return;
+        const box = modal.querySelector('.share-review-box');
+        const title = memo.title || 'プロンプト';
+        const encodedTitle = encodeURIComponent('「' + title + '」をmemoppaで共有しました\n');
+        const encodedUrl = encodeURIComponent(url);
+        box.innerHTML = [
+            '<div class="share-review-header">',
+            '<h3>✅ 共有URLを発行しました</h3>',
+            '<button class="share-done-close"><span class="material-symbols-rounded">close</span></button>',
+            '</div>',
+            '<div class="share-url-row">',
+            '<span class="share-url-text">' + url + '</span>',
+            '<button class="share-url-copy-btn" title="URLをコピー"><span class="material-symbols-rounded">content_copy</span></button>',
+            '</div>',
+            '<p class="share-sns-label">SNSでシェアする</p>',
+            '<div class="share-sns-row">',
+            '<a class="share-sns-btn share-sns-x" href="https://twitter.com/intent/tweet?text=' + encodedTitle + '&url=' + encodedUrl + '" target="_blank" rel="noopener">',
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>',
+            '<span>X</span></a>',
+            '<a class="share-sns-btn share-sns-line" href="https://social-plugins.line.me/lineit/share?url=' + encodedUrl + '" target="_blank" rel="noopener">',
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>',
+            '<span>LINE</span></a>',
+            '<a class="share-sns-btn share-sns-fb" href="https://www.facebook.com/sharer/sharer.php?u=' + encodedUrl + '" target="_blank" rel="noopener">',
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+            '<span>Facebook</span></a>',
+            '<button class="share-sns-btn share-sns-slack" id="slackShareBtn">',
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>',
+            '<span>Slack</span></button>',
+            '<button class="share-sns-btn share-sns-mail" id="mailShareBtn">',
+            '<span class="material-symbols-rounded" style="font-size:18px">mail</span>',
+            '<span>メール</span></button>',
+            '</div>',
+            '<button class="share-done-btn">閉じる</button>'
+        ].join('');
+        box.querySelector('.share-url-copy-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(url);
+            const btn = box.querySelector('.share-url-copy-btn');
+            btn.innerHTML = '<span class="material-symbols-rounded">check</span>';
+            setTimeout(() => { btn.innerHTML = '<span class="material-symbols-rounded">content_copy</span>'; }, 2000);
+        });
+        box.querySelector('#slackShareBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(url);
+            showToast('URLをコピーしました。Slackに貼り付けてください。', 'share');
+        });
+        box.querySelector('#mailShareBtn').addEventListener('click', () => {
+            location.href = 'mailto:?subject=' + encodeURIComponent(title + ' — memoppa') + '&body=' + encodeURIComponent(url);
+        });
+        box.querySelector('.share-done-close').addEventListener('click', closeModal);
+        box.querySelector('.share-done-btn').addEventListener('click', closeModal);
     });
 }
 
@@ -2658,10 +2706,13 @@ async function importSharedPrompt(shareId) {
         const snap = await getDoc(ref);
         if (!snap.exists()) { showToast('共有リンクが見つかりません', 'error'); return; }
         const data = snap.data();
+        const importedContent = (data.content || '').includes('<')
+            ? data.content
+            : (data.content || '').replace(/\n/g, '<br>');
         const newMemo = {
             id: `memo_${Date.now()}`,
             title: `${data.title}（共有）`,
-            content: data.content,
+            content: importedContent,
             isPrompt: true, useCount: 0,
             archived: false, isPinned: false, isPrivate: false, isTrashed: false,
             createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),

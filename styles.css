@@ -1001,3 +1001,100 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     box-shadow: 0 0 0 2px rgba(15, 110, 86, 0.12);
 }
 .sr-var-chip { cursor: pointer; user-select: none; }
+
+/* ===== シェア完了画面（SNS選択） ===== */
+.share-url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-2, #f5f5f5);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 16px 0 20px;
+}
+.share-url-text {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.share-url-copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--accent-color, #0F6E56);
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+.share-url-copy-btn:hover { background: var(--surface-3); }
+.share-sns-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+.share-sns-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.share-sns-btn {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    border: none;
+    min-width: 58px;
+    transition: opacity 0.15s, transform 0.1s;
+}
+.share-sns-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+.share-sns-x    { background: #0f1419; color: #fff; }
+.share-sns-line { background: #06c755; color: #fff; }
+.share-sns-fb   { background: #1877f2; color: #fff; }
+.share-sns-slack{ background: #4a154b; color: #fff; }
+.share-sns-mail { background: var(--surface-3, #e8e8e8); color: var(--text-primary); }
+.share-done-btn {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+}
+.share-done-btn:hover { background: var(--surface-2); }
+.share-done-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 6px;
+}
+
+/* ===== シェアレビューモーダル拡大 ===== */
+.share-review-box {
+    max-width: 680px !important;
+    width: 92vw !important;
+}
+.share-review-live-text {
+    min-height: 240px !important;
+    max-height: 50vh !important;
+}
