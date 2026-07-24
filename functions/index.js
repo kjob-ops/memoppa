@@ -49,7 +49,7 @@ async function handleSharePage(context, shareId, url) {
   if (!data) return context.next();
 
   const { title, preview } = data;
-  const ogTitle = `${title} — memoppa`;
+  const ogTitle = title;
   const ogDesc = preview || 'プロンプトシェア専用メモ帳 memoppa';
 
   const indexRes = await context.next();

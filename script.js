@@ -2602,7 +2602,7 @@ function openShareReviewModal(memo) {
         if (!url) return;
         const box = modal.querySelector('.share-review-box');
         const title = memo.title || 'プロンプト';
-        const encodedTitle = encodeURIComponent('「' + title + '」をmemoppaで共有しました\n');
+        const encodedTitle = encodeURIComponent('「' + title + '」をmemoppaで共有しました👇\n#memoppa #プロンプト');
         const encodedUrl = encodeURIComponent(url);
         box.innerHTML = [
             '<div class="share-review-header">',
@@ -2624,6 +2624,9 @@ function openShareReviewModal(memo) {
             '<a class="share-sns-btn share-sns-fb" href="https://www.facebook.com/sharer/sharer.php?u=' + encodedUrl + '" target="_blank" rel="noopener">',
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
             '<span>Facebook</span></a>',
+            '<button class="share-sns-btn share-sns-insta" id="instaShareBtn">',
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
+            '<span>Instagram</span></button>',
             '<button class="share-sns-btn share-sns-slack" id="slackShareBtn">',
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/></svg>',
             '<span>Slack</span></button>',
@@ -2638,6 +2641,10 @@ function openShareReviewModal(memo) {
             const btn = box.querySelector('.share-url-copy-btn');
             btn.innerHTML = '<span class="material-symbols-rounded">check</span>';
             setTimeout(() => { btn.innerHTML = '<span class="material-symbols-rounded">content_copy</span>'; }, 2000);
+        });
+        box.querySelector('#instaShareBtn').addEventListener('click', () => {
+            navigator.clipboard.writeText(url);
+            showToast('URLをコピーしました。Instagramのプロフィールリンクや投稿に貼り付けてください。', 'share');
         });
         box.querySelector('#slackShareBtn').addEventListener('click', () => {
             navigator.clipboard.writeText(url);
@@ -2675,7 +2682,7 @@ async function doSharePrompt(memo, overrideContent) {
         const shareToken = `${currentUser.uid}_${ref.id}`;
         const url = `${location.origin}/?share=${btoa(shareToken)}`;
         await navigator.clipboard.writeText(url);
-        showShareToastWithX(url, memo.title || 'プロンプト');
+        // Xシェアトーストは削除（SNS選択画面に統合済み）
         // 元のメモに共有参照を保存（統計表示のため）
         memo.sharedRef = ref.id;
         cloudSaveMemo(memo);

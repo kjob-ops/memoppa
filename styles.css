@@ -1098,3 +1098,6 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     min-height: 240px !important;
     max-height: 50vh !important;
 }
+
+/* Instagram SNSボタン */
+.share-sns-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff; }
