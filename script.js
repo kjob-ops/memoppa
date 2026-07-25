@@ -83,6 +83,7 @@ const mainCopyBtn = document.getElementById('mainCopyBtn');
 const mainDeleteBtn = document.getElementById('mainDeleteBtn');
 
 const mobileNewMemoFab = document.getElementById('mobileNewMemoFab');
+const promptHubNewMemoFab = document.getElementById('promptHubNewMemoFab');
 const backToListBtn = document.getElementById('backToListBtn');
 const mobilePinBtn = document.getElementById('mobilePinBtn');
 const mobileCopyBtn = document.getElementById('mobileCopyBtn');
@@ -900,6 +901,7 @@ function setupEventListeners() {
     
     if(newMemoBtn) newMemoBtn.addEventListener('click', () => { createNewMemo(); if(!isSidebarPinned) toggleSidebar(true); });
     if(mobileNewMemoFab) mobileNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
+    if(promptHubNewMemoFab) promptHubNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
     const promptHubBackBtn = document.getElementById('promptHubBackBtn');
     if(promptHubBackBtn) promptHubBackBtn.addEventListener('click', () => setFilter('all'));

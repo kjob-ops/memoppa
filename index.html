@@ -75,10 +75,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <span class="material-symbols-rounded">favorite</span> いいね
                 </button>
                 <button id="sharePreviewCopyBtn" class="share-preview-copy-btn">
-                    <span class="material-symbols-rounded">content_copy</span> コピーする
+                    <span class="material-symbols-rounded">content_copy</span> コピー
                 </button>
                 <button id="sharePreviewImportBtn" class="share-preview-import-btn">
-                    <span class="material-symbols-rounded">login</span> ログインして保存
+                    <span class="material-symbols-rounded">login</span> 保存
                 </button>
             </div>
             <div class="share-preview-sns">
@@ -236,6 +236,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </div>
                 </div>
                 <div id="promptHubList" class="prompt-hub-list"></div>
+                <button id="promptHubNewMemoFab" class="fab-button mobile-only extended-fab">
+                    <span class="material-symbols-rounded">edit</span><span class="fab-text">作成</span>
+                </button>
             </div>
             <div id="searchModeView" class="search-mode-view hidden">
               <div class="search-mode-inner">
@@ -675,5 +678,30 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
         </div>
     </div>
+<script>
+(function() {
+  let lastY = 0;
+  const targets = ['memoList', 'promptHubList'];
+  targets.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let ticking = false;
+    el.addEventListener('scroll', function() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function() {
+        const y = el.scrollTop;
+        const fab = el.parentElement.querySelector('.extended-fab');
+        if (fab) {
+          if (y > lastY && y > 40) fab.classList.add('fab-collapsed');
+          else fab.classList.remove('fab-collapsed');
+        }
+        lastY = y;
+        ticking = false;
+      });
+    });
+  });
+})();
+</script>
 </body>
 </html>
