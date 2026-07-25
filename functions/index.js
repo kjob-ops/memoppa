@@ -1,10 +1,11 @@
 // Cloudflare Pages Function — dynamic OGP for memoppa share URLs
 // Route: / with ?share=<base64(uid_docId)>
 // Injects per-prompt title + description into index.html OGP tags
-// og:image stays static (SVG not supported by X card crawler)
+// og:image / twitter:image are generated dynamically via Vercel (@vercel/og)
 
 const FIREBASE_PROJECT = 'pepper-c6683';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT}/databases/(default)/documents`;
+const OG_IMAGE_BASE = 'https://memoppa-og.vercel.app/api/og';
 
 export async function onRequest(context) {
   const { request } = context;
@@ -51,6 +52,7 @@ async function handleSharePage(context, shareId, url) {
   const { title, preview } = data;
   const ogTitle = title;
   const ogDesc = preview || 'プロンプトシェア専用メモ帳 memoppa';
+  const ogImage = `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}`;
 
   const indexRes = await context.next();
   const html = await indexRes.text();
@@ -60,8 +62,10 @@ async function handleSharePage(context, shareId, url) {
     .replace(/(<meta\s+property="og:title"\s+content=")[^"]*(")/,   `$1${esc(ogTitle)}$2`)
     .replace(/(<meta\s+property="og:description"\s+content=")[^"]*(")/,`$1${esc(ogDesc)}$2`)
     .replace(/(<meta\s+property="og:url"\s+content=")[^"]*(")/,     `$1${esc(url.href)}$2`)
+    .replace(/(<meta\s+property="og:image"\s+content=")[^"]*(")/,   `$1${esc(ogImage)}$2`)
     .replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*(")/,  `$1${esc(ogTitle)}$2`)
-    .replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,`$1${esc(ogDesc)}$2`);
+    .replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,`$1${esc(ogDesc)}$2`)
+    .replace(/(<meta\s+name="twitter:image"\s+content=")[^"]*(")/,  `$1${esc(ogImage)}$2`);
 
   return new Response(patched, {
     headers: {
