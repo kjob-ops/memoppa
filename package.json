@@ -1,16 +1,15 @@
 {
-  "name": "build",
+  "name": "memoppa-og",
   "version": "1.0.0",
-  "description": "",
-  "main": "script.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "firebase": "^12.16.0",
-    "workers-og": "^0.0.27"
+    "next": "14.2.5",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   }
 }
