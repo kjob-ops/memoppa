@@ -2822,25 +2822,39 @@ function applySettings() {
     if(qpWrap) qpWrap.classList.toggle('hidden', !qpOpen);
 }
 // キラカード レアリティ判定
-// 成長値 = importCount×2 + useCount×3 + previewCopyCount×1
+// 成長値 = importCount×2 + previewCopyCount×1 + likeCount×1（自分の使用回数は含めない）
 // 「保存して繰り返し使ってくれる人」が最も価値が高く、通りすがりのコピーは軽い重み
 function getRarity(growthScore) {
-    if (growthScore >= 60) return { level: 'gold',   label: '🥇 GOLD',   class: 'rarity-gold' };
-    if (growthScore >= 20) return { level: 'silver', label: '🥈 SILVER', class: 'rarity-silver' };
-    if (growthScore >= 5)  return { level: 'bronze', label: '🥉 BRONZE', class: 'rarity-bronze' };
+    if (growthScore >= 60) return { level: 'gold',   label: '✨ GOLD',   class: 'rarity-gold' };
+    if (growthScore >= 20) return { level: 'silver', label: 'SILVER', class: 'rarity-silver' };
+    if (growthScore >= 5)  return { level: 'bronze', label: 'BRONZE', class: 'rarity-bronze' };
     return { level: 'normal', label: '', class: 'rarity-normal' };
 }
 function calcGrowthScore(data) {
-    return (data.importCount || 0) * 2 + (data.useCount || 0) * 3 + (data.previewCopyCount || 0) * 1 + (data.likeCount || 0) * 1;
+    return (data.importCount || 0) * 2 + (data.previewCopyCount || 0) * 1 + (data.likeCount || 0) * 1;
+}
+
+function closeAllPhcMenus() {
+    document.querySelectorAll('.phc-more-menu').forEach(el => el.remove());
+}
+
+async function stopSharingPrompt(memo) {
+    if (!memo.sharedRef || !currentUser) return;
+    try {
+        const parts = memo.sharedRef.split('/');
+        const refUid = parts.length >= 2 ? parts[0] : currentUser.uid;
+        const refDocId = parts.length >= 2 ? parts[1] : parts[0];
+        await deleteDoc(doc(db, 'users', refUid, 'sharedPrompts', refDocId));
+    } catch (e) {
+        console.warn('共有停止に失敗しました', e);
+    }
+    memo.sharedRef = null;
 }
 
 function renderPromptHub(query = '', activeTag = null) {
     const list = document.getElementById('promptHubList');
     if(!list) return;
-    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
-        .filter(m => !query || (m.title||'').toLowerCase().includes(query) || m.content.replace(/<[^>]*>/g,'').toLowerCase().includes(query))
-        .filter(m => !activeTag || extractTags(m.content).includes(activeTag))
-        .sort((a, b) => (b.useCount||0) - (a.useCount||0));
+    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate && !m.archived)
     if(prompts.length === 0) {
         list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
         return;
@@ -2864,14 +2878,14 @@ function renderPromptHub(query = '', activeTag = null) {
                 <div class="phc-preview">${escapeHtml(preview)}</div>
                 ${tags.length ? `<div class="phc-tags">${tags.map(t=>`<span class="phc-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
                 <div class="phc-meta-row">
-                    ${m.useCount ? `<span class="phc-count">${m.useCount}回使用</span>` : '<span class="phc-count phc-count-zero">未使用</span>'}
-                    ${m.sharedRef ? `<span class="phc-share-stats" id="shareStats_${m.id}"><span class="material-symbols-rounded">group</span>...</span>` : ''}
+                    ${m.sharedRef ? `<span class="phc-share-stats" id="shareStats_${m.id}"><span class="phc-stat-item"><span class="phc-stat-icon">❤</span><span class="phc-stat-num" id="statLike_${m.id}">-</span></span><span class="phc-stat-sep">·</span><span class="phc-stat-item"><span class="phc-stat-icon">📋</span><span class="phc-stat-num" id="statCopy_${m.id}">-</span></span><span class="phc-stat-sep">·</span><span class="phc-stat-item"><span class="phc-stat-icon">🔖</span><span class="phc-stat-num" id="statSave_${m.id}">-</span></span></span>` : '<span class="phc-count phc-count-zero">共有すると統計が見えます</span>'}
                 </div>
             </div>
             <div class="phc-actions">
                 <button class="phc-copy-btn" data-id="${m.id}" title="コピー"><span class="material-symbols-rounded">content_copy</span> コピー</button>
                 <button class="phc-share-btn" data-id="${m.id}" title="共有URLを生成"><span class="material-symbols-rounded">share</span></button>
                 <button class="phc-edit-btn" data-id="${m.id}" title="編集"><span class="material-symbols-rounded">edit</span></button>
+                <button class="phc-more-btn" data-id="${m.id}" title="その他"><span class="material-symbols-rounded">more_vert</span></button>
             </div>`;
         // 共有ボタン
         card.querySelector('.phc-share-btn').addEventListener('click', (e) => {
@@ -2910,6 +2924,66 @@ function renderPromptHub(query = '', activeTag = null) {
             setFilter('all');
             selectMemo(m.id);
         });
+        // 「…」メニュー：ピン留め・アーカイブ・非公開・削除
+        card.querySelector('.phc-more-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeAllPhcMenus();
+            const menu = document.createElement('div');
+            menu.className = 'phc-more-menu';
+            menu.innerHTML = `
+                <button data-act="pin">${m.isPinned ? '<span class="material-symbols-rounded">keep_off</span> ピン留め解除' : '<span class="material-symbols-rounded">keep</span> ピン留め'}</button>
+                <button data-act="archive">${m.archived ? '<span class="material-symbols-rounded">unarchive</span> アーカイブ解除' : '<span class="material-symbols-rounded">archive</span> アーカイブ'}</button>
+                <button data-act="private">${m.isPrivate ? '<span class="material-symbols-rounded">lock_open</span> 公開に戻す' : '<span class="material-symbols-rounded">lock</span> 非公開にする'}</button>
+                <button data-act="memolist"><span class="material-symbols-rounded">list</span> メモ一覧で開く</button>
+                <button data-act="delete" class="phc-menu-danger"><span class="material-symbols-rounded">delete</span> 削除</button>
+            `;
+            document.body.appendChild(menu);
+            const btnRect = e.currentTarget.getBoundingClientRect();
+            menu.style.position = 'fixed';
+            menu.style.top = `${btnRect.bottom + 4}px`;
+            menu.style.left = `${Math.min(btnRect.left, window.innerWidth - 200)}px`;
+            menu.querySelector('[data-act="pin"]').addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                m.isPinned = !m.isPinned; cloudSaveMemo(m); renderPromptHub();
+                showToast(m.isPinned ? 'ピン留めしました' : 'ピン留めを解除しました', 'push_pin');
+                menu.remove();
+            });
+            menu.querySelector('[data-act="archive"]').addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                m.archived = !m.archived; cloudSaveMemo(m); renderPromptHub();
+                showToast(m.archived ? 'アーカイブしました（共有は継続中）' : 'アーカイブを解除しました', 'archive');
+                menu.remove();
+            });
+            menu.querySelector('[data-act="private"]').addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                m.isPrivate = !m.isPrivate; cloudSaveMemo(m); renderPromptHub();
+                showToast(m.isPrivate ? '非公開にしました' : '公開に戻しました', 'visibility');
+                menu.remove();
+            });
+            menu.querySelector('[data-act="memolist"]').addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                setFilter('all'); selectMemo(m.id);
+                menu.remove();
+            });
+            menu.querySelector('[data-act="delete"]').addEventListener('click', async (ev) => {
+                ev.stopPropagation();
+                menu.remove();
+                const hasShare = !!m.sharedRef;
+                const confirmMsg = hasShare
+                    ? 'このプロンプトを削除しますか？\n共有中のURLも無効になり、閲覧できなくなります。'
+                    : 'このプロンプトを削除しますか？';
+                if (!confirm(confirmMsg)) return;
+                if (hasShare) { await stopSharingPrompt(m); }
+                m.isTrashed = true; m.isPinned = false; m.trashedAt = new Date().toISOString();
+                cloudSaveMemo(m); renderPromptHub();
+                showToast('削除しました', 'delete');
+            });
+            setTimeout(() => {
+                document.addEventListener('click', function onDocClick(ev) {
+                    if (!menu.contains(ev.target)) { menu.remove(); document.removeEventListener('click', onDocClick); }
+                });
+            }, 0);
+        });
         // カード左クリックで編集
         card.querySelector('.phc-left').addEventListener('click', () => { setFilter('all'); selectMemo(m.id); });
         list.appendChild(card);
@@ -2922,19 +2996,14 @@ function renderPromptHub(query = '', activeTag = null) {
                     const refUid = parts.length >= 2 ? parts[0] : currentUser.uid;
                     const refDocId = parts.length >= 2 ? parts[1] : parts[0];
                     const snap = await getDoc(doc(db, 'users', refUid, 'sharedPrompts', refDocId));
-                    const statsEl = document.getElementById(`shareStats_${m.id}`);
                     if (snap.exists()) {
                         const data = snap.data();
-                        const importCount = data.importCount || 0;
-                        const previewCopies = data.previewCopyCount || 0;
-                        if (statsEl) {
-                            const statParts = [];
-                            if (importCount > 0) statParts.push(`${importCount}人が保存`);
-                            if (previewCopies > 0) statParts.push(`${previewCopies}回コピー`);
-                            statsEl.innerHTML = statParts.length > 0
-                                ? `<span class="material-symbols-rounded">group</span>${statParts.join('・')}`
-                                : `<span class="material-symbols-rounded">share</span>共有中`;
-                        }
+                        const likeNum = document.getElementById(`statLike_${m.id}`);
+                        const copyNum = document.getElementById(`statCopy_${m.id}`);
+                        const saveNum = document.getElementById(`statSave_${m.id}`);
+                        if (likeNum) likeNum.textContent = data.likeCount || 0;
+                        if (copyNum) copyNum.textContent = data.previewCopyCount || 0;
+                        if (saveNum) saveNum.textContent = data.importCount || 0;
                         const rarity = getRarity(calcGrowthScore(data));
                         card.classList.remove('rarity-normal', 'rarity-bronze', 'rarity-silver', 'rarity-gold');
                         card.classList.add(rarity.class);

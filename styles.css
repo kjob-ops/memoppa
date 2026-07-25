@@ -1101,3 +1101,48 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 
 /* Instagram SNSボタン */
 .share-sns-insta { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff; }
+
+/* ===== プロンプトカード「…」メニュー ===== */
+.phc-more-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+.phc-more-btn:hover { background: var(--surface-2); }
+
+.phc-more-menu {
+    background: var(--surface-1, #fff);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    padding: 6px;
+    z-index: 3000;
+    min-width: 190px;
+    display: flex;
+    flex-direction: column;
+}
+.phc-more-menu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 13.5px;
+    color: var(--text-primary);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.phc-more-menu button:hover { background: var(--surface-2); }
+.phc-more-menu button .material-symbols-rounded { font-size: 18px; }
+.phc-more-menu button.phc-menu-danger { color: #d9364f; }
+.phc-more-menu button.phc-menu-danger:hover { background: rgba(217, 54, 79, 0.08); }
