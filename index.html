@@ -156,7 +156,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="multi-select-grid">
                     <button id="multiPinBtn" class="multi-btn"><span class="material-symbols-rounded">push_pin</span> Pin</button>
-                    <button id="multiArchiveBtn" class="multi-btn"><span class="material-symbols-rounded">archive</span> Archive</button>
                     <button id="multiTrashBtn" class="multi-btn danger"><span class="material-symbols-rounded">delete</span> Trash</button>
                     <button id="multiPrivateBtn" class="multi-btn"><span class="material-symbols-rounded">visibility_off</span> Private</button>
                     <button id="multiCopyBtn" class="multi-btn"><span class="material-symbols-rounded">bolt</span> Copy</button>
@@ -192,7 +191,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <div class="filter-more-wrap">
                         <button id="filterMoreBtn" class="sort-btn-compact" title="その他のフィルタ"><span class="material-symbols-rounded">more_horiz</span></button>
                         <div id="filterMoreMenu" class="sort-menu hidden">
-                            <button id="archiveBtn" class="sort-menu-item" data-filter="archive"><span class="material-symbols-rounded">archive</span> アーカイブ</button>
                             <button id="trashBtn" class="sort-menu-item" data-filter="trash"><span class="material-symbols-rounded">delete</span> ゴミ箱</button>
                         </div>
                     </div>
@@ -318,9 +316,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <div id="quickPromptBar" class="quick-prompt-bar"></div>
                 </div>
                 <div class="memo-header">
-                    <div class="memo-title-wrap">
-                        <input type="text" id="memoTitle" class="memo-title" placeholder="タイトル...">
-                    </div>
                     <div class="memo-actions pc-only">
                         <button id="mainAttachBtn" class="action-btn hidden" title="ファイルを添付"><span class="material-symbols-rounded">attach_file</span></button>
                         <button id="mainPromptBtn" class="action-btn" title="プロンプト登録・解除"><span class="material-symbols-rounded">bolt</span></button>
@@ -341,6 +336,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div id="memoTagsContainer" class="memo-tags-container"></div>
                 <div class="textarea-container">
+                    <div class="memo-title-wrap">
+                        <input type="text" id="memoTitle" class="memo-title" placeholder="タイトル...">
+                    </div>
                     <div id="memoContent" class="memo-content" contenteditable="true" data-placeholder="入力を始めてください。#タグ や [リンク] でアイデアをつなげられます。（Ctrl/Cmd+B で太字、⚡登録でプロンプト庫へ）"></div>
                 </div>
                 <div id="memoAttachmentsContainer" class="memo-attachments-container hidden"></div>
@@ -512,7 +510,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <button id="switchAccountBtn" class="settings-action-btn" style="flex: 0 0 auto; font-size: 12px; padding: 6px 12px; white-space: nowrap;"><span class="material-symbols-rounded" style="font-size: 16px;">swap_horiz</span> 変更</button>
             </div>
-            
+
+            <div class="settings-group" id="profileSettingsGroup" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
+                <label>🏷️ memoppaプロフィール（共有時に表示されます）</label>
+                <div class="profile-settings-row">
+                    <div id="profileAvatarPreview" class="profile-avatar-preview"><img src="memoppa-icon.svg" alt=""></div>
+                    <input type="text" id="profileDisplayNameInput" class="settings-select" placeholder="表示名" maxlength="20" style="flex: 1;">
+                </div>
+                <div class="profile-avatar-colors" id="profileAvatarColors"></div>
+                <button id="profileSaveBtn" class="settings-action-btn" style="width: 100%; justify-content: center; margin-top: 10px;"><span class="material-symbols-rounded">check</span> プロフィールを保存</button>
+            </div>
+
             <button id="reopenOnboardingBtn" class="reopen-onboarding-btn"><span class="material-symbols-rounded">school</span> 使い方をもう一度見る</button>
 
             <div class="settings-group">

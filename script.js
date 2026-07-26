@@ -691,7 +691,7 @@ function initRealtimeMemos() {
         
         // オンボーディングは loadUserSettings の hasSeenOnboarding フラグで表示される
         if (!currentMemoId || !memos.some(m => m.id === currentMemoId)) {
-            const firstActive = memos.find(m => !m.archived && !m.isTrashed);
+            const firstActive = memos.find(m => !m.isTrashed);
             if(firstActive) selectMemo(firstActive.id, false);
         } else {
             const current = memos.find(m => m.id === currentMemoId);
@@ -823,7 +823,6 @@ async function handleMultiAction(action) {
         const memo = memos.find(m => m.id === id);
         if (memo) {
             if (action === 'pin') memo.isPinned = !memo.isPinned;
-            if (action === 'archive') memo.archived = !memo.archived;
             if (action === 'trash') { memo.isTrashed = true; memo.isPinned = false; }
             if (action === 'restore') { memo.isTrashed = false; }
             if (action === 'private') { memo.isPrivate = !memo.isPrivate; }
@@ -942,7 +941,6 @@ function setupEventListeners() {
     const filterMoreBtn = document.getElementById('filterMoreBtn');
     const filterMoreMenu = document.getElementById('filterMoreMenu');
     if(filterMoreBtn) filterMoreBtn.addEventListener('click', (e) => { e.stopPropagation(); filterMoreMenu?.classList.toggle('hidden'); });
-    if(archiveBtn) archiveBtn.addEventListener('click', () => { setFilter('archive'); filterMoreMenu?.classList.add('hidden'); });
     if(trashBtn) trashBtn.addEventListener('click', () => { setFilter('trash'); filterMoreMenu?.classList.add('hidden'); });
     document.addEventListener('click', (e) => { if(!e.target.closest('.filter-more-wrap')) filterMoreMenu?.classList.add('hidden'); });
     if(closePromptVarBtn) closePromptVarBtn.addEventListener('click', closePromptVarModal);
@@ -965,7 +963,6 @@ function setupEventListeners() {
 
     if(cancelMultiSelectBtn) cancelMultiSelectBtn.addEventListener('click', exitMultiSelect);
     if(multiPinBtn) multiPinBtn.addEventListener('click', () => handleMultiAction('pin'));
-    if(multiArchiveBtn) multiArchiveBtn.addEventListener('click', () => handleMultiAction('archive'));
     if(multiTrashBtn) multiTrashBtn.addEventListener('click', bulkTrashOrRestore);
     if(multiPrivateBtn) multiPrivateBtn.addEventListener('click', () => handleMultiAction('private'));
     if(multiCopyBtn) multiCopyBtn.addEventListener('click', () => {
@@ -1353,7 +1350,15 @@ function setupEventListeners() {
 
     if(maskToggleButton) maskToggleButton.addEventListener('click', () => { isMasked = !isMasked; updateMaskButtonIcon(); document.body.classList.toggle('mask-mode', isMasked); });
 
-    if(settingsBtn) settingsBtn.addEventListener('click', () => { settingsModal.classList.remove('hidden'); settingsModal.style.display = 'flex'; applySettings(); });
+    if(settingsBtn) settingsBtn.addEventListener('click', () => { settingsModal.classList.remove('hidden'); settingsModal.style.display = 'flex'; applySettings(); renderProfileSettings(); });
+    const profileSaveBtn = document.getElementById('profileSaveBtn');
+    if(profileSaveBtn) profileSaveBtn.addEventListener('click', async () => {
+        if (!currentUser) return;
+        const nameInput = document.getElementById('profileDisplayNameInput');
+        if (nameInput && nameInput.value.trim()) await updateUserDisplayName(currentUser.uid, nameInput.value);
+        if (selectedAvatarColorDraft) await updateUserAvatarColor(currentUser.uid, selectedAvatarColorDraft);
+        showToast('プロフィールを保存しました', 'check_circle');
+    });
     if(closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; saveAndApplySettings(); });
 
     // PWAホーム画面追加
@@ -2231,20 +2236,6 @@ function directPin(id) {
     const m = memos.find(x => x.id === id);
     if (m && !m.isTrashed) { m.isPinned = !m.isPinned; cloudSaveMemo(m); renderMemoList(); }
 }
-function directArchive(id) {
-    const m = memos.find(x => x.id === id);
-    if (m && !m.isTrashed) {
-        const wasArchived = m.archived;
-        m.archived = !m.archived; cloudSaveMemo(m); renderMemoList();
-        if(m.archived) {
-            showToastWithUndo('アーカイブしました', () => {
-                m.archived = false; cloudSaveMemo(m); renderMemoList(); showToast('元に戻しました', 'unarchive');
-            });
-        } else {
-            showToast('アーカイブから戻しました', 'unarchive');
-        }
-    }
-}
 function directPrivate(id) {
     const m = memos.find(x => x.id === id);
     if (m && !m.isTrashed) { m.isPrivate = !m.isPrivate; cloudSaveMemo(m); renderMemoList(); if (currentMemoId === id) selectMemo(id, false); }
@@ -2300,6 +2291,42 @@ async function updateUserDisplayName(uid, newName) {
     if (!trimmed) return;
     await setDoc(doc(db, 'users', uid), { displayName: trimmed, profileCustomized: true }, { merge: true });
     profileCache.set(uid, { ...(profileCache.get(uid) || {}), displayName: trimmed, profileCustomized: true });
+}
+async function updateUserAvatarColor(uid, color) {
+    await setDoc(doc(db, 'users', uid), { avatarColor: color, profileCustomized: true }, { merge: true });
+    profileCache.set(uid, { ...(profileCache.get(uid) || {}), avatarColor: color, profileCustomized: true });
+}
+let selectedAvatarColorDraft = null;
+function buildAvatarColorSwatches() {
+    const wrap = document.getElementById('profileAvatarColors');
+    if (!wrap || wrap.childElementCount) return;
+    AVATAR_COLORS.forEach((color) => {
+        const sw = document.createElement('div');
+        sw.className = 'profile-avatar-color-swatch';
+        sw.style.background = color;
+        sw.dataset.color = color;
+        sw.addEventListener('click', () => {
+            selectedAvatarColorDraft = color;
+            wrap.querySelectorAll('.profile-avatar-color-swatch').forEach(el => el.classList.remove('selected'));
+            sw.classList.add('selected');
+            const preview = document.getElementById('profileAvatarPreview');
+            if (preview) preview.style.background = color;
+        });
+        wrap.appendChild(sw);
+    });
+}
+async function renderProfileSettings() {
+    if (!currentUser) return;
+    buildAvatarColorSwatches();
+    const profile = await getUserProfile(currentUser.uid);
+    selectedAvatarColorDraft = profile.avatarColor;
+    const nameInput = document.getElementById('profileDisplayNameInput');
+    if (nameInput) nameInput.value = profile.displayName;
+    const preview = document.getElementById('profileAvatarPreview');
+    if (preview) preview.style.background = profile.avatarColor;
+    document.querySelectorAll('.profile-avatar-color-swatch').forEach(el => {
+        el.classList.toggle('selected', el.dataset.color === profile.avatarColor);
+    });
 }
 
 async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
@@ -2683,7 +2710,7 @@ async function openShareReviewModal(memo) {
         if (!url) return;
         const box = modal.querySelector('.share-review-box');
         const title = memo.title || 'プロンプト';
-        const encodedTitle = encodeURIComponent('プロンプト「' + title + '」をmemoppaで共有しました。\n\n#memoppa #プロンプト');
+        const encodedTitle = encodeURIComponent('プロンプトのタイトル「' + title + '」をmemoppaで共有しました。\n\n#memoppa #プロンプト');
         const encodedUrl = encodeURIComponent(url);
         box.innerHTML = [
             '<div class="share-review-header">',
@@ -2800,7 +2827,7 @@ async function importSharedPrompt(shareId) {
             : (data.content || '').replace(/\n/g, '<br>');
         const newMemo = {
             id: `memo_${Date.now()}`,
-            title: `${data.title}（共有）`,
+            title: data.title,
             content: importedContent,
             isPrompt: true, useCount: 0,
             archived: false, isPinned: false, isPrivate: false, isTrashed: false,
@@ -2936,7 +2963,7 @@ async function stopSharingPrompt(memo) {
 function renderPromptHub(query = '', activeTag = null) {
     const list = document.getElementById('promptHubList');
     if(!list) return;
-    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate && !m.archived)
+    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
     if(prompts.length === 0) {
         list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
         return;
@@ -3006,7 +3033,7 @@ function renderPromptHub(query = '', activeTag = null) {
             setFilter('all');
             selectMemo(m.id);
         });
-        // 「…」メニュー：ピン留め・アーカイブ・非公開・削除
+        // 「…」メニュー：ピン留め・非公開・削除
         card.querySelector('.phc-more-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             closeAllPhcMenus();
@@ -3014,7 +3041,6 @@ function renderPromptHub(query = '', activeTag = null) {
             menu.className = 'phc-more-menu';
             menu.innerHTML = `
                 <button data-act="pin">${m.isPinned ? '<span class="material-symbols-rounded">keep_off</span> ピン留め解除' : '<span class="material-symbols-rounded">keep</span> ピン留め'}</button>
-                <button data-act="archive">${m.archived ? '<span class="material-symbols-rounded">unarchive</span> アーカイブ解除' : '<span class="material-symbols-rounded">archive</span> アーカイブ'}</button>
                 <button data-act="private">${m.isPrivate ? '<span class="material-symbols-rounded">lock_open</span> 公開に戻す' : '<span class="material-symbols-rounded">lock</span> 非公開にする'}</button>
                 <button data-act="memolist"><span class="material-symbols-rounded">list</span> メモ一覧で開く</button>
                 <button data-act="delete" class="phc-menu-danger"><span class="material-symbols-rounded">delete</span> 削除</button>
@@ -3028,12 +3054,6 @@ function renderPromptHub(query = '', activeTag = null) {
                 ev.stopPropagation();
                 m.isPinned = !m.isPinned; cloudSaveMemo(m); renderPromptHub();
                 showToast(m.isPinned ? 'ピン留めしました' : 'ピン留めを解除しました', 'push_pin');
-                menu.remove();
-            });
-            menu.querySelector('[data-act="archive"]').addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                m.archived = !m.archived; cloudSaveMemo(m); renderPromptHub();
-                showToast(m.archived ? 'アーカイブしました（共有は継続中）' : 'アーカイブを解除しました', 'archive');
                 menu.remove();
             });
             menu.querySelector('[data-act="private"]').addEventListener('click', (ev) => {
@@ -3111,7 +3131,6 @@ function setFilter(filter) {
     currentFilter = filter;
     if(allBtn) allBtn.classList.toggle('active', filter === 'all');
     if(promptFilterBtn) promptFilterBtn.classList.toggle('active', filter === 'prompt');
-    if(archiveBtn) archiveBtn.classList.toggle('active', filter === 'archive');
     if(trashBtn) trashBtn.classList.toggle('active', filter === 'trash');
     // ･･メニューのアクティブ表示
     const filterMoreBtn = document.getElementById('filterMoreBtn');
@@ -3138,9 +3157,8 @@ function setFilter(filter) {
 
 function getFilteredMemos() {
     let filtered = memos;
-    if (currentFilter === 'all') filtered = filtered.filter(m => !m.archived && !m.isTrashed);
+    if (currentFilter === 'all') filtered = filtered.filter(m => !m.isTrashed);
     else if (currentFilter === 'prompt') filtered = filtered.filter(m => m.isPrompt && !m.isTrashed);
-    else if (currentFilter === 'archive') filtered = filtered.filter(m => m.archived && !m.isTrashed);
     else if (currentFilter === 'trash') filtered = filtered.filter(m => m.isTrashed);
 
     if (currentSearch) {
@@ -3198,10 +3216,10 @@ function renderMemoList() {
         const isSelected = selectedMemos.has(memo.id);
         const swipeContainer = document.createElement('div');
         swipeContainer.className = 'swipe-container';
-        swipeContainer.innerHTML = `<div class="swipe-bg"><span class="material-symbols-rounded">archive</span><span class="material-symbols-rounded">archive</span></div>`;
+        swipeContainer.innerHTML = `<div class="swipe-bg"><span class="material-symbols-rounded">delete</span><span class="material-symbols-rounded">delete</span></div>`;
 
         const item = document.createElement('div');
-        item.className = `memo-item ${memo.id === currentMemoId && !multiSelectMode ? 'active' : ''} ${memo.isPinned ? 'pinned' : ''} ${memo.isTrashed ? 'trashed' : ''} ${isSelected ? 'selected' : ''} ${multiSelectMode ? 'multi-select-active' : ''}`;
+        item.className = `memo-item ${memo.id === currentMemoId && !multiSelectMode ? 'active' : ''} ${memo.isPinned ? 'pinned' : ''} ${memo.isTrashed ? 'trashed' : ''} ${isSelected ? 'selected' : ''} ${multiSelectMode ? 'multi-select-active' : ''} ${memo.sharedRef ? 'is-shared' : ''}`;
         item.dataset.id = memo.id;
 
         let titleText = memo.title ? memo.title : '無題のメモ';
@@ -3233,20 +3251,11 @@ function renderMemoList() {
                 <button class="list-action-btn labeled-btn restore-btn" data-id="${memo.id}"><span class="material-symbols-rounded">restore_from_trash</span>復元</button>
                 <button class="list-action-btn labeled-btn danger delete-forever-btn" data-id="${memo.id}"><span class="material-symbols-rounded">delete_forever</span>削除</button>
             </div>`;
-        } else if (currentFilter === 'archive' && memo.archived) {
-            actionHtml = `
-            <div class="list-actions">
-                ${promptCopyHtml}
-                <button class="list-action-btn pin-btn ${memo.isPinned ? 'is-pinned' : ''}" data-id="${memo.id}" title="Pin"><span class="material-symbols-rounded">push_pin</span></button>
-                <button class="list-action-btn unarchive-btn" data-id="${memo.id}" title="元に戻す"><span class="material-symbols-rounded">unarchive</span></button>
-                <button class="list-action-btn trash-btn" data-id="${memo.id}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
-            </div>`;
         } else {
             actionHtml = `
             <div class="list-actions">
                 ${promptCopyHtml}
                 <button class="list-action-btn pin-btn ${memo.isPinned ? 'is-pinned' : ''}" data-id="${memo.id}" title="Pin"><span class="material-symbols-rounded">push_pin</span></button>
-                <button class="list-action-btn archive-btn" data-id="${memo.id}" title="Archive"><span class="material-symbols-rounded">archive</span></button>
                 <button class="list-action-btn trash-btn" data-id="${memo.id}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
             </div>`;
         }
@@ -3263,6 +3272,7 @@ function renderMemoList() {
                     <div class="memo-item-title-wrap">
                         ${memo.isPinned ? '<span class="material-symbols-rounded pin-indicator">push_pin</span>' : ''}
                         ${memo.isPrompt && !memo.isPrivate ? '<span class="material-symbols-rounded prompt-indicator">bolt</span>' : ''}
+                        ${memo.sharedRef ? '<span class="material-symbols-rounded shared-indicator" title="共有されたプロンプト">group</span>' : ''}
                         <span class="memo-item-title ${isUntitled ? 'untitled' : ''}">${escapeHtml(titleText)}</span>
                     </div>
                 </div>
@@ -3281,8 +3291,6 @@ function renderMemoList() {
                 if(btn.classList.contains('prompt-copy-btn')) copyPrompt(id);
                 if(btn.classList.contains('private-btn')) directPrivate(id);
                 if(btn.classList.contains('pin-btn')) directPin(id);
-                if(btn.classList.contains('archive-btn')) directArchive(id);
-                if(btn.classList.contains('unarchive-btn')) directArchive(id);
                 if(btn.classList.contains('trash-btn')) directDelete(id);
                 if(btn.classList.contains('restore-btn')) directRestore(id);
                 if(btn.classList.contains('delete-forever-btn')) directDelete(id);
@@ -3341,7 +3349,7 @@ function renderMemoList() {
             isSwiping = false; item.style.transition = 'transform 0.2s ease-out';
             if (Math.abs(currentX) > window.innerWidth * 0.3) {
                 item.style.transform = `translateX(${currentX > 0 ? 100 : -100}%)`;
-                setTimeout(() => { memo.archived = !memo.archived; cloudSaveMemo(memo); renderMemoList(); showToast(memo.archived ? 'アーカイブしました' : 'アーカイブから戻しました', 'archive'); }, 200);
+                setTimeout(() => { directDelete(memo.id); }, 200);
             } else { item.style.transform = `translateX(0)`; }
             currentX = 0;
         });
