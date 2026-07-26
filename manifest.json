@@ -1,7 +1,7 @@
 {
   "name": "memoppa",
   "short_name": "memoppa",
-  "description": "シェアしたプロンプトの「いいね・利用数」が数字で見えるプロンプト専用メモ帳。",
+  "description": "そのプロンプト、誰かが使ってる。シェアしたプロンプトの反応が見える、プロンプト専用メモ帳。",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F6E56",
