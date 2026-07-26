@@ -224,7 +224,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .list-action-btn.trash-btn:hover { color: var(--danger-color); background-color: rgba(220,53,69,0.1); }
 .list-action-btn.private-btn.is-private { color: var(--danger-color); opacity: 1; }
 
-.memo-item.sortable-ghost { opacity: 0.5; background-color: var(--bg-selected); box-shadow: 0 6px 16px rgba(0,0,0,0.18); transform: scale(1.02); transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s; }
+.memo-item.sortable-ghost { opacity: 0.55; background-color: var(--bg-selected); box-shadow: 0 10px 24px rgba(0,0,0,0.25); outline: 2px solid var(--accent-color); outline-offset: -2px; transform: scale(1.03) rotate(-1deg); transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s; z-index: 50; }
 .drag-handle { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--text-secondary); cursor: grab; opacity: 0; transition: opacity 0.2s; flex-shrink: 0; touch-action: none; }
 .memo-item:hover .drag-handle, .memo-item.multi-select-active .drag-handle, .memo-item.selected .drag-handle { opacity: 0.5; }
 .drag-handle:hover { opacity: 1 !important; }

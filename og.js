@@ -4,7 +4,6 @@ export const config = {
   runtime: 'edge',
 };
 
-// Noto Sans JP (Google Fonts) を実行時に取得してフォント埋め込み
 async function loadJapaneseFont(text) {
   const fontUrl = `https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@700&text=${encodeURIComponent(
     text
@@ -25,8 +24,7 @@ export default async function handler(req) {
 
     const fontData = await loadJapaneseFont(title + body + 'memoppa プロンプトシェア専用メモ帳');
 
-    // タイトルが長い場合はフォントサイズを自動で少し縮める
-    const titleSize = title.length > 20 ? 48 : title.length > 12 ? 56 : 64;
+    const titleSize = title.length > 24 ? 42 : title.length > 14 ? 50 : 58;
 
     return new ImageResponse(
       (
@@ -38,25 +36,19 @@ export default async function handler(req) {
             flexDirection: 'column',
             justifyContent: 'space-between',
             backgroundColor: '#0F6E56',
-            padding: '56px 64px',
+            padding: '44px 56px',
           }}
         >
-          {/* タイトル + 本文ブロック（上寄せ） */}
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
                 display: 'flex',
                 fontSize: titleSize,
                 fontWeight: 700,
                 color: '#ffffff',
-                lineHeight: 1.35,
+                lineHeight: 1.3,
                 fontFamily: 'Noto Sans JP',
-                maxWidth: '1050px',
+                maxWidth: '1080px',
               }}
             >
               {title}
@@ -65,11 +57,11 @@ export default async function handler(req) {
               <div
                 style={{
                   display: 'flex',
-                  marginTop: 20,
-                  fontSize: 28,
+                  marginTop: 16,
+                  fontSize: 26,
                   color: '#eaffee',
                   fontFamily: 'Noto Sans JP',
-                  maxWidth: '1000px',
+                  maxWidth: '1020px',
                 }}
               >
                 {body}
@@ -77,27 +69,20 @@ export default async function handler(req) {
             )}
           </div>
 
-          {/* フッター：ロゴ + タグライン（下寄せ） */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 14,
-            }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div
               style={{
                 display: 'flex',
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 background: '#ffffff',
-                borderRadius: 12,
+                borderRadius: 10,
               }}
             />
             <div
               style={{
                 display: 'flex',
-                fontSize: 30,
+                fontSize: 26,
                 fontWeight: 700,
                 color: '#ffffff',
                 fontFamily: 'Noto Sans JP',
@@ -108,10 +93,10 @@ export default async function handler(req) {
             <div
               style={{
                 display: 'flex',
-                fontSize: 20,
+                fontSize: 18,
                 color: '#eaffee',
                 fontFamily: 'Noto Sans JP',
-                marginLeft: 4,
+                marginLeft: 2,
               }}
             >
               プロンプトシェア専用メモ帳
