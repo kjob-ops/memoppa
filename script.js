@@ -222,6 +222,7 @@ onAuthStateChanged(auth, (user) => {
 
         loadUserSettings(); 
         initRealtimeMemos();
+        ensureUserProfile(currentUser.uid);
         if (!isEventsSetup) { setupEventListeners(); isEventsSetup = true; }
         // 共有URLからのインポート処理
         const urlShare = new URLSearchParams(location.search).get('share');
@@ -1342,6 +1343,12 @@ function setupEventListeners() {
         }
     };
     if(memoTitle) memoTitle.addEventListener('input', triggerSave);
+    if(memoTitle) memoTitle.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab' && !e.shiftKey) {
+            e.preventDefault();
+            if (memoContent) memoContent.focus();
+        }
+    });
     if(memoContent) memoContent.addEventListener('input', triggerSave);
 
     if(maskToggleButton) maskToggleButton.addEventListener('click', () => { isMasked = !isMasked; updateMaskButtonIcon(); document.body.classList.toggle('mask-mode', isMasked); });
@@ -2243,6 +2250,58 @@ function directPrivate(id) {
     if (m && !m.isTrashed) { m.isPrivate = !m.isPrivate; cloudSaveMemo(m); renderMemoList(); if (currentMemoId === id) selectMemo(id, false); }
 }
 
+// ---- プロフィール（表示名・アバター）----
+const AVATAR_COLORS = ['#0F6E56', '#2563EB', '#DB2777', '#D97706', '#7C3AED', '#0891B2', '#DC2626', '#059669'];
+function getAvatarColorFromUid(uid) {
+    let hash = 0;
+    for (let i = 0; i < uid.length; i++) { hash = (hash * 31 + uid.charCodeAt(i)) >>> 0; }
+    return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+function generateDefaultDisplayName() {
+    const n = Math.floor(1000 + Math.random() * 9000);
+    return `memoppa${n}`;
+}
+const profileCache = new Map();
+async function ensureUserProfile(uid) {
+    try {
+        const ref = doc(db, 'users', uid);
+        const snap = await getDoc(ref);
+        if (!snap.exists() || !snap.data()?.displayName) {
+            const profile = {
+                displayName: generateDefaultDisplayName(),
+                avatarColor: getAvatarColorFromUid(uid),
+                profileCreatedAt: new Date().toISOString(),
+            };
+            await setDoc(ref, profile, { merge: true });
+            profileCache.set(uid, profile);
+        } else {
+            profileCache.set(uid, snap.data());
+        }
+    } catch (e) { /* 取得失敗時はgetUserProfile側でフォールバック */ }
+}
+async function getUserProfile(uid) {
+    if (profileCache.has(uid)) return profileCache.get(uid);
+    try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        const data = snap.exists() ? snap.data() : null;
+        const profile = {
+            displayName: data?.displayName || 'memoppaユーザー',
+            avatarColor: data?.avatarColor || getAvatarColorFromUid(uid),
+            profileCustomized: !!data?.profileCustomized,
+        };
+        profileCache.set(uid, profile);
+        return profile;
+    } catch (e) {
+        return { displayName: 'memoppaユーザー', avatarColor: getAvatarColorFromUid(uid), profileCustomized: false };
+    }
+}
+async function updateUserDisplayName(uid, newName) {
+    const trimmed = (newName || '').trim();
+    if (!trimmed) return;
+    await setDoc(doc(db, 'users', uid), { displayName: trimmed, profileCustomized: true }, { merge: true });
+    profileCache.set(uid, { ...(profileCache.get(uid) || {}), displayName: trimmed, profileCustomized: true });
+}
+
 async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
 
 // プロンプト共有URL生成
@@ -2298,6 +2357,14 @@ async function showSharePreview(shareId, isLoggedIn = false) {
             .replace(/\n{3,}/g, '\n\n').trim();
 
         if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
+
+        // ---- 作成者情報（ライブ参照：プロフィール変更が即座に反映される）----
+        const authorEl = document.getElementById('sharePreviewAuthor');
+        if (authorEl) {
+            getUserProfile(uid).then((profile) => {
+                authorEl.innerHTML = `<span class="sp-author-avatar" style="background:${profile.avatarColor}"><img src="memoppa-icon.svg" alt=""></span><span class="sp-author-name">${profile.displayName}</span>`;
+            });
+        }
         if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
 
         // ---- いいねボタン（likeCount +1）----
@@ -2415,7 +2482,8 @@ function applyVarSubstitution(text, selectedFindings) {
 // ==========================================
 // 共有プレビュー＆変数化サジェストモーダル
 // ==========================================
-function openShareReviewModal(memo) {
+async function openShareReviewModal(memo) {
+    const authorProfile = currentUser ? await getUserProfile(currentUser.uid) : null;
     // <br>や<p>タグを改行に変換してから他のタグを除去（改行を保持）
     const plainText = memo.content
         .replace(/<br\s*\/?>/gi, '\n')
@@ -2442,6 +2510,12 @@ function openShareReviewModal(memo) {
                 <button class="share-review-close"><span class="material-symbols-rounded">close</span></button>
             </div>
             <p class="share-review-var-hint">💡 <code>{{変数}}</code>とは？ — 受け取った人が自分の情報で穴埋めして使える「空欄」の印です。</p>
+            ${authorProfile && !authorProfile.profileCustomized ? `
+                <div class="share-review-nickname">
+                    <label for="shareReviewNickname">🏷️ 表示名（あとで設定からも変更できます）</label>
+                    <input type="text" id="shareReviewNickname" value="${authorProfile.displayName}" maxlength="20">
+                </div>
+            ` : ''}
             ${findings.length > 0 ? `
                 <div class="share-review-alert">
                     <span class="material-symbols-rounded">auto_awesome</span>
@@ -2600,6 +2674,10 @@ function openShareReviewModal(memo) {
     modal.querySelector('.share-review-cancel').addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
+        const nicknameInput = document.getElementById('shareReviewNickname');
+        if (nicknameInput && currentUser) {
+            await updateUserDisplayName(currentUser.uid, nicknameInput.value);
+        }
         const finalText = getFinalText();
         const url = await doSharePrompt(memo, finalText);
         if (!url) return;
@@ -2662,17 +2740,18 @@ function openShareReviewModal(memo) {
 }
 
 async function sharePrompt(memo) {
-    openShareReviewModal(memo);
+    await openShareReviewModal(memo);
 }
 
 async function doSharePrompt(memo, overrideContent) {
     try {
         if(!currentUser) { showToast('ログインが必要です', 'error'); return; }
+        const authorProfile = await getUserProfile(currentUser.uid);
         const shareData = {
             title: memo.title || '無題',
             content: overrideContent || memo.content || '',
             sharedAt: new Date().toISOString(),
-            sharedBy: currentUser.displayName || 'memoppaユーザー',
+            sharedBy: authorProfile.displayName,
             uid: currentUser.uid,
             importCount: 0,
             useCount: 0,
