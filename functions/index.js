@@ -38,8 +38,9 @@ async function fetchPromptData(shareId) {
     const rawContent = fields.content?.stringValue || '';
     const content = rawContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     const preview = content.slice(0, 100) + (content.length > 100 ? '…' : '');
+    const fullLen = content.length;
 
-    return { title, preview };
+    return { title, preview, fullLen };
   } catch (e) {
     return null;
   }
@@ -49,10 +50,10 @@ async function handleSharePage(context, shareId, url) {
   const data = await fetchPromptData(shareId);
   if (!data) return context.next();
 
-  const { title, preview } = data;
+  const { title, preview, fullLen } = data;
   const ogTitle = title;
   const ogDesc = preview || 'プロンプトシェア専用メモ帳 memoppa';
-  const ogImage = `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}`;
+  const ogImage = `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}&len=${fullLen || ''}`;
 
   const indexRes = await context.next();
   const html = await indexRes.text();
