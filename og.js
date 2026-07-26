@@ -21,10 +21,11 @@ export default async function handler(req) {
     const { searchParams } = new URL(req.url);
     const title = searchParams.get('title') || 'ちょっといいプロンプト、とっておこう。';
     const body = searchParams.get('body') || '';
+    const charCount = searchParams.get('len') || (body ? String(body.length) : '');
 
-    const fontData = await loadJapaneseFont(title + body + 'memoppa プロンプトシェア専用メモ帳');
+    const fontData = await loadJapaneseFont(title + body + 'memoppa約文字');
 
-    const titleSize = title.length > 24 ? 42 : title.length > 14 ? 50 : 58;
+    const titleSize = title.length > 24 ? 40 : title.length > 14 ? 48 : 56;
 
     return new ImageResponse(
       (
@@ -36,9 +37,34 @@ export default async function handler(req) {
             flexDirection: 'column',
             justifyContent: 'space-between',
             backgroundColor: '#0F6E56',
-            padding: '44px 56px',
+            padding: '40px 52px',
           }}
         >
+          {/* ヘッダー：ブランド表記はここ1箇所のみ */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                display: 'flex',
+                width: 30,
+                height: 30,
+                background: '#ffffff',
+                borderRadius: 8,
+              }}
+            />
+            <div
+              style={{
+                display: 'flex',
+                fontSize: 22,
+                fontWeight: 700,
+                color: '#ffffff',
+                fontFamily: 'Noto Sans JP',
+              }}
+            >
+              memoppa
+            </div>
+          </div>
+
+          {/* タイトル + 本文 */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div
               style={{
@@ -48,7 +74,7 @@ export default async function handler(req) {
                 color: '#ffffff',
                 lineHeight: 1.3,
                 fontFamily: 'Noto Sans JP',
-                maxWidth: '1080px',
+                maxWidth: '1090px',
               }}
             >
               {title}
@@ -57,11 +83,11 @@ export default async function handler(req) {
               <div
                 style={{
                   display: 'flex',
-                  marginTop: 16,
-                  fontSize: 26,
+                  marginTop: 14,
+                  fontSize: 24,
                   color: '#eaffee',
                   fontFamily: 'Noto Sans JP',
-                  maxWidth: '1020px',
+                  maxWidth: '1030px',
                 }}
               >
                 {body}
@@ -69,39 +95,19 @@ export default async function handler(req) {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* フッター：文字数のみ */}
+          {charCount && (
             <div
               style={{
                 display: 'flex',
-                width: 36,
-                height: 36,
-                background: '#ffffff',
-                borderRadius: 10,
-              }}
-            />
-            <div
-              style={{
-                display: 'flex',
-                fontSize: 26,
-                fontWeight: 700,
-                color: '#ffffff',
-                fontFamily: 'Noto Sans JP',
-              }}
-            >
-              memoppa
-            </div>
-            <div
-              style={{
-                display: 'flex',
-                fontSize: 18,
+                fontSize: 20,
                 color: '#eaffee',
                 fontFamily: 'Noto Sans JP',
-                marginLeft: 2,
               }}
             >
-              プロンプトシェア専用メモ帳
+              約{charCount}文字
             </div>
-          </div>
+          )}
         </div>
       ),
       {

@@ -2317,7 +2317,7 @@ async function showSharePreview(shareId, isLoggedIn = false) {
                 updateDoc(ref, { previewCopyCount: increment(1) }).catch(() => {});
                 copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピーしました';
                 setTimeout(() => {
-                    copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピーする';
+                    copyBtn.innerHTML = '<span class="material-symbols-rounded">content_copy</span> コピー';
                 }, 2000);
             }).catch(() => {
                 showCopyFallback(displayText);
@@ -2337,7 +2337,7 @@ async function showSharePreview(shareId, isLoggedIn = false) {
         const importBtn = document.getElementById('sharePreviewImportBtn');
         if(importBtn) {
             if(isLoggedIn) {
-                importBtn.innerHTML = '<span class="material-symbols-rounded">download</span> 保存する';
+                importBtn.innerHTML = '<span class="material-symbols-rounded">download</span> 保存';
             }
             importBtn.addEventListener('click', async () => {
                 if(isLoggedIn) {
@@ -2441,6 +2441,7 @@ function openShareReviewModal(memo) {
                 <h3 id="shareReviewHeading">⚡ シェアの準備</h3>
                 <button class="share-review-close"><span class="material-symbols-rounded">close</span></button>
             </div>
+            <p class="share-review-var-hint">💡 <code>{{変数}}</code>とは？ — 受け取った人が自分の情報で穴埋めして使える「空欄」の印です。</p>
             ${findings.length > 0 ? `
                 <div class="share-review-alert">
                     <span class="material-symbols-rounded">auto_awesome</span>
@@ -2604,7 +2605,7 @@ function openShareReviewModal(memo) {
         if (!url) return;
         const box = modal.querySelector('.share-review-box');
         const title = memo.title || 'プロンプト';
-        const encodedTitle = encodeURIComponent('「' + title + '」をmemoppaで共有しました👇\n#memoppa #プロンプト');
+        const encodedTitle = encodeURIComponent('プロンプト「' + title + '」をmemoppaで共有しました。\n\n#memoppa #プロンプト');
         const encodedUrl = encodeURIComponent(url);
         box.innerHTML = [
             '<div class="share-review-header">',
