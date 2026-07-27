@@ -1356,7 +1356,6 @@ function setupEventListeners() {
         if (!currentUser) return;
         const nameInput = document.getElementById('profileDisplayNameInput');
         if (nameInput && nameInput.value.trim()) await updateUserDisplayName(currentUser.uid, nameInput.value);
-        if (selectedAvatarColorDraft) await updateUserAvatarColor(currentUser.uid, selectedAvatarColorDraft);
         showToast('プロフィールを保存しました', 'check_circle');
     });
     if(closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; saveAndApplySettings(); });
@@ -2241,13 +2240,7 @@ function directPrivate(id) {
     if (m && !m.isTrashed) { m.isPrivate = !m.isPrivate; cloudSaveMemo(m); renderMemoList(); if (currentMemoId === id) selectMemo(id, false); }
 }
 
-// ---- プロフィール（表示名・アバター）----
-const AVATAR_COLORS = ['#0F6E56', '#2563EB', '#DB2777', '#D97706', '#7C3AED', '#0891B2', '#DC2626', '#059669'];
-function getAvatarColorFromUid(uid) {
-    let hash = 0;
-    for (let i = 0; i < uid.length; i++) { hash = (hash * 31 + uid.charCodeAt(i)) >>> 0; }
-    return AVATAR_COLORS[hash % AVATAR_COLORS.length];
-}
+// ---- プロフィール（表示名のみ）----
 function generateDefaultDisplayName() {
     const n = Math.floor(1000 + Math.random() * 9000);
     return `memoppa${n}`;
@@ -2260,7 +2253,6 @@ async function ensureUserProfile(uid) {
         if (!snap.exists() || !snap.data()?.displayName) {
             const profile = {
                 displayName: generateDefaultDisplayName(),
-                avatarColor: getAvatarColorFromUid(uid),
                 profileCreatedAt: new Date().toISOString(),
             };
             await setDoc(ref, profile, { merge: true });
@@ -2277,13 +2269,12 @@ async function getUserProfile(uid) {
         const data = snap.exists() ? snap.data() : null;
         const profile = {
             displayName: data?.displayName || 'memoppaユーザー',
-            avatarColor: data?.avatarColor || getAvatarColorFromUid(uid),
             profileCustomized: !!data?.profileCustomized,
         };
         profileCache.set(uid, profile);
         return profile;
     } catch (e) {
-        return { displayName: 'memoppaユーザー', avatarColor: getAvatarColorFromUid(uid), profileCustomized: false };
+        return { displayName: 'memoppaユーザー', profileCustomized: false };
     }
 }
 async function updateUserDisplayName(uid, newName) {
@@ -2292,41 +2283,11 @@ async function updateUserDisplayName(uid, newName) {
     await setDoc(doc(db, 'users', uid), { displayName: trimmed, profileCustomized: true }, { merge: true });
     profileCache.set(uid, { ...(profileCache.get(uid) || {}), displayName: trimmed, profileCustomized: true });
 }
-async function updateUserAvatarColor(uid, color) {
-    await setDoc(doc(db, 'users', uid), { avatarColor: color, profileCustomized: true }, { merge: true });
-    profileCache.set(uid, { ...(profileCache.get(uid) || {}), avatarColor: color, profileCustomized: true });
-}
-let selectedAvatarColorDraft = null;
-function buildAvatarColorSwatches() {
-    const wrap = document.getElementById('profileAvatarColors');
-    if (!wrap || wrap.childElementCount) return;
-    AVATAR_COLORS.forEach((color) => {
-        const sw = document.createElement('div');
-        sw.className = 'profile-avatar-color-swatch';
-        sw.style.background = color;
-        sw.dataset.color = color;
-        sw.addEventListener('click', () => {
-            selectedAvatarColorDraft = color;
-            wrap.querySelectorAll('.profile-avatar-color-swatch').forEach(el => el.classList.remove('selected'));
-            sw.classList.add('selected');
-            const preview = document.getElementById('profileAvatarPreview');
-            if (preview) preview.style.background = color;
-        });
-        wrap.appendChild(sw);
-    });
-}
 async function renderProfileSettings() {
     if (!currentUser) return;
-    buildAvatarColorSwatches();
     const profile = await getUserProfile(currentUser.uid);
-    selectedAvatarColorDraft = profile.avatarColor;
     const nameInput = document.getElementById('profileDisplayNameInput');
     if (nameInput) nameInput.value = profile.displayName;
-    const preview = document.getElementById('profileAvatarPreview');
-    if (preview) preview.style.background = profile.avatarColor;
-    document.querySelectorAll('.profile-avatar-color-swatch').forEach(el => {
-        el.classList.toggle('selected', el.dataset.color === profile.avatarColor);
-    });
 }
 
 async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
@@ -2389,7 +2350,7 @@ async function showSharePreview(shareId, isLoggedIn = false) {
         const authorEl = document.getElementById('sharePreviewAuthor');
         if (authorEl) {
             getUserProfile(uid).then((profile) => {
-                authorEl.innerHTML = `<span class="sp-author-avatar" style="background:${profile.avatarColor}"><img src="memoppa-icon.svg" alt=""></span><span class="sp-author-name">${profile.displayName}</span>`;
+                authorEl.innerHTML = `<span class="sp-author-name">by ${profile.displayName}</span>`;
             });
         }
         if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
