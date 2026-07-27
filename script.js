@@ -24,6 +24,7 @@ let memos = [];
 let currentUser = null;
 let currentMemoId = null;
 let currentFilter = 'all'; 
+const expandedTagsIds = new Set();
 let currentSortIndex = 0; 
 let currentSearch = '';
 let selectedTags = [];
@@ -2364,6 +2365,10 @@ async function showSharePreview(shareId, isLoggedIn = false) {
             });
         }
         if(contentEl) { contentEl.textContent = displayText; contentEl.style.whiteSpace = 'pre-wrap'; }
+        const charCountEl = document.getElementById('sharePreviewCharCount');
+        if (charCountEl && displayText) {
+            charCountEl.innerHTML = `<span class="material-symbols-rounded" style="font-size:13px;">notes</span> 約${displayText.length}文字`;
+        }
 
         // ---- いいねボタン（likeCount +1）----
         const likeBtn = document.getElementById('sharePreviewLikeBtn');
@@ -2947,8 +2952,9 @@ function renderPromptHub(query = '', activeTag = null) {
         // 未共有のプロンプトは常にノーマル表示。共有済みなら統計を非同期取得してから確定する。
         const rarity = getRarity(0);
         const card = document.createElement('div');
-        card.className = `prompt-hub-card ${rarity.class}`;
+        card.className = `prompt-hub-card ${rarity.class} ${m.sharedRef ? 'is-shared' : ''}`;
         card.innerHTML = `
+            ${m.sharedRef ? '<div class="shared-ribbon">共有中</div>' : ''}
             <div class="phc-card-head">
                 <span class="material-symbols-rounded phc-bolt">bolt</span>
                 <span id="rarityBadge_${m.id}"></span>
@@ -2956,7 +2962,12 @@ function renderPromptHub(query = '', activeTag = null) {
             <div class="phc-left" data-id="${m.id}">
                 <div class="phc-title">${escapeHtml(m.title||'無題')}</div>
                 <div class="phc-preview">${escapeHtml(preview)}</div>
-                ${tags.length ? `<div class="phc-tags">${tags.map(t=>`<span class="phc-tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+                ${tags.length ? (() => {
+                    const isExpanded = expandedTagsIds.has(`phc_${m.id}`);
+                    const visibleTags = isExpanded ? tags : tags.slice(0, 3);
+                    const remaining = tags.length - visibleTags.length;
+                    return `<div class="phc-tags">${visibleTags.map(t=>`<span class="phc-tag">#${escapeHtml(t)}</span>`).join('')}${remaining > 0 ? `<span class="phc-tag phc-tag-more" data-expand-id="phc_${m.id}">+${remaining}</span>` : ''}</div>`;
+                })() : ''}
                 <div class="phc-meta-row">
                     ${m.sharedRef ? `<span class="phc-share-stats" id="shareStats_${m.id}"><span class="phc-stat-item"><span class="phc-stat-icon">❤</span><span class="phc-stat-num" id="statLike_${m.id}">-</span></span><span class="phc-stat-sep">·</span><span class="phc-stat-item"><span class="phc-stat-icon">📋</span><span class="phc-stat-num" id="statCopy_${m.id}">-</span></span><span class="phc-stat-sep">·</span><span class="phc-stat-item"><span class="phc-stat-icon">🔖</span><span class="phc-stat-num" id="statSave_${m.id}">-</span></span></span>` : '<span class="phc-count phc-count-zero">共有すると統計が見えます</span>'}
                 </div>
@@ -3005,6 +3016,13 @@ function renderPromptHub(query = '', activeTag = null) {
             selectMemo(m.id);
         });
         // 「…」メニュー：ピン留め・非公開・削除
+        card.querySelectorAll('.phc-tag-more').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                expandedTagsIds.add(chip.dataset.expandId);
+                renderPromptHub();
+            });
+        });
         card.querySelector('.phc-more-btn').addEventListener('click', (e) => {
             e.stopPropagation();
             closeAllPhcMenus();
@@ -3201,7 +3219,12 @@ function renderMemoList() {
         const tags = extractTags(memo.content);
         let tagsHtml = '';
         if (tags.length > 0 && !memo.isPrivate) {
-            const chipsHtml = tags.map(t => `<span class="list-tag-chip">#${escapeHtml(t)}</span>`).join('');
+            const isExpanded = expandedTagsIds.has(memo.id);
+            const visibleTags = isExpanded ? tags : tags.slice(0, 3);
+            const remaining = tags.length - visibleTags.length;
+            const chipsHtml = visibleTags.map(t => `<span class="list-tag-chip">#${escapeHtml(t)}</span>`).join('')
+                + (remaining > 0 ? `<span class="list-tag-chip list-tag-more" data-expand-id="${memo.id}">+${remaining}</span>` : '')
+                + (isExpanded && tags.length > 3 ? `<span class="list-tag-chip list-tag-more" data-collapse-id="${memo.id}">閉じる</span>` : '');
             tagsHtml = `<div class="list-tags-container">${chipsHtml}</div>`;
         }
 
@@ -3232,6 +3255,7 @@ function renderMemoList() {
         }
 
         item.innerHTML = `
+            ${memo.sharedRef ? '<div class="shared-ribbon">共有中</div>' : ''}
             <div class="item-meta-col">
                 <div class="checkbox-wrapper">
                     <input type="checkbox" class="custom-checkbox list-checkbox" data-id="${memo.id}" ${isSelected ? 'checked' : ''}>
@@ -3243,7 +3267,6 @@ function renderMemoList() {
                     <div class="memo-item-title-wrap">
                         ${memo.isPinned ? '<span class="material-symbols-rounded pin-indicator">push_pin</span>' : ''}
                         ${memo.isPrompt && !memo.isPrivate ? '<span class="material-symbols-rounded prompt-indicator">bolt</span>' : ''}
-                        ${memo.sharedRef ? '<span class="material-symbols-rounded shared-indicator" title="共有されたプロンプト">group</span>' : ''}
                         <span class="memo-item-title ${isUntitled ? 'untitled' : ''}">${escapeHtml(titleText)}</span>
                     </div>
                 </div>
@@ -3254,6 +3277,15 @@ function renderMemoList() {
                 </div>
             </div>
         `;
+
+        item.querySelectorAll('.list-tag-more').forEach(chip => {
+            chip.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (chip.dataset.expandId) expandedTagsIds.add(chip.dataset.expandId);
+                if (chip.dataset.collapseId) expandedTagsIds.delete(chip.dataset.collapseId);
+                renderMemoList();
+            });
+        });
 
         item.querySelectorAll('.list-action-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {

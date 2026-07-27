@@ -201,6 +201,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .list-tags-container { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 1; }
 .list-tags-container::-webkit-scrollbar { display: none; }
 .list-tag-chip { font-size: 10px; padding: 2px 8px; background-color: var(--bg-active); border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: var(--radius-sm); white-space: nowrap; line-height: 1.4;}
+.list-tag-more { background-color: var(--bg-selected); color: var(--accent-color); border-color: transparent; font-weight: 700; cursor: pointer; }
 
 .list-actions { display: flex; gap: 2px; align-items: center; justify-content: flex-start; }
 .labeled-btn { display: flex !important; align-items: center; gap: 4px; padding: 6px 12px !important; border-radius: var(--radius-full) !important; font-size: 12px; font-weight: 600; white-space: nowrap; width: auto !important; }
@@ -233,8 +234,8 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 
 /* プロンプト庫 */
 .prompt-indicator { font-size: 14px !important; color: var(--accent-color); flex-shrink: 0; }
-.shared-indicator { font-size: 13px !important; color: var(--accent-color); opacity: 0.7; flex-shrink: 0; }
-.memo-item.is-shared .memo-item-title-wrap { border-bottom: 2px solid var(--accent-color); padding-bottom: 2px; width: fit-content; max-width: 100%; }
+.shared-ribbon { position: absolute; top: 9px; left: -21px; width: 84px; text-align: center; background: var(--accent-dark, #0a5a45); color: #fff; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; padding: 2px 0; transform: rotate(-45deg); pointer-events: none; z-index: 2; }
+.memo-item.is-shared { position: relative; overflow: hidden; }
 .action-btn.active-prompt { opacity: 1; color: var(--accent-color); background-color: var(--bg-selected); }
 /* コピー: 一覧の最重要アクション。塗りつぶしで常に主役として目立たせる */
 .prompt-copy-btn { position: relative; background-color: var(--accent-color) !important; color: white !important; border: 1px solid var(--accent-color) !important; border-radius: var(--radius-sm); padding: 6px 10px !important; }
@@ -519,7 +520,19 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     .drag-handle:active { opacity: 1 !important; }
     .list-action-btn { padding: 7px; }
 
-    .mobile-editor-topbar { display: flex; justify-content: space-between; align-items: center; height: 50px; padding: 0 8px; border-bottom: 1px solid var(--border-color); background-color: var(--bg-primary); flex-shrink: 0; }
+    .mobile-editor-topbar {
+        display: flex; justify-content: space-between; align-items: center; height: 50px; padding: 0 8px;
+        position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+        background-color: rgba(255,255,255,0.62);
+        backdrop-filter: blur(14px) saturate(160%);
+        -webkit-backdrop-filter: blur(14px) saturate(160%);
+        border-bottom: 1px solid rgba(255,255,255,0.4);
+    }
+    [data-theme="dark"] .mobile-editor-topbar {
+        background-color: rgba(30,30,30,0.55);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .textarea-container { padding-top: 50px; }
     .mobile-top-actions { display: flex; gap: 0px; }
     .mobile-top-actions .icon-button { width: 44px; height: 44px; }
     .mobile-action-menu { position: absolute; top: 60px; right: 16px; background-color: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow); z-index: 1000; min-width: 180px; flex-direction: column; padding: 8px 0; }
@@ -531,7 +544,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     .extended-fab.fab-collapsed { width: 60px; padding: 0; gap: 0; }
     .extended-fab.fab-collapsed .fab-text { display: none; }
     .editor-container { padding-top: 16px; }
-    .memo-header { padding: 0 16px; margin-bottom: 4px; }
+    .memo-header { display: none; }
     .memo-title { font-size: 24px; }
     .memo-updated-at { padding: 0 16px; margin: -2px 0 6px 0; font-size: 11px; }
     .memo-tags-container { padding: 0 16px; margin-top: 6px; margin-bottom: 10px; gap: 6px; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
@@ -812,7 +825,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 /* 共有プロンプトプレビュー画面 */
 .share-preview-screen { position: fixed; inset: 0; background: var(--bg-primary, #fff); display: flex; align-items: flex-start; justify-content: center; padding: 0; overflow-y: auto; z-index: 9999; }
 .share-preview-screen.hidden { display: none; }
-.share-preview-box { width: 100%; max-width: 640px; background: transparent; border: none; border-radius: 0; padding: 24px 20px 60px 20px; box-shadow: none; }
+.share-preview-box { width: 100%; max-width: 640px; background: transparent; border: none; border-radius: 0; padding: 24px 20px 60px 20px; box-shadow: none; position: relative; }
 .share-preview-logo { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: #0F6E56; margin-bottom: 10px; }
 .share-preview-close-btn { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text-secondary, #6b7280); display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; }
 .share-preview-close-btn:hover { background: var(--bg-hover); }
@@ -825,7 +838,8 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 #spStatCopy .material-symbols-rounded { color: #0F6E56; }
 #spStatSave .material-symbols-rounded { color: #1d4ed8; }
 .share-preview-title { font-size: 20px; font-weight: 700; color: var(--text-primary, #1f2937); margin-bottom: 6px; }
-.share-preview-content { background: #f8faf9; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; font-size: 13px; color: #374151; line-height: 1.7; white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow-y: auto; margin-bottom: 12px; font-family: 'SFMono-Regular', 'Consolas', monospace; }
+.share-preview-content { background: #f8faf9; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px; font-size: 14px; color: #374151; line-height: 1.85; white-space: pre-wrap; word-break: break-word; margin-bottom: 8px; font-family: 'SFMono-Regular', 'Consolas', monospace; }
+.share-preview-charcount { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--accent-color); background: var(--bg-selected); padding: 3px 10px; border-radius: 99px; margin-bottom: 16px; }
 .share-preview-actions { display: flex; gap: 10px; margin-bottom: 4px; }
 .share-preview-copy-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 11px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f9fafb; color: #374151; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
 .share-preview-copy-btn:hover { border-color: #0F6E56; color: #0F6E56; }
@@ -893,6 +907,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 /* ========== プロンプトハブ カードグリッド ========== */
 .prompt-hub-list { flex: 1; overflow-y: auto; padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; align-content: start; }
 .prompt-hub-card { display: flex; flex-direction: column; background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: 14px; padding: 16px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; position: relative; }
+.prompt-hub-card.is-shared { overflow: hidden; }
 .prompt-hub-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
 .phc-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .phc-bolt { font-size: 18px; color: var(--accent-color); }
@@ -901,6 +916,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .phc-preview { font-size: 12px; color: var(--text-secondary); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; }
 .phc-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
 .phc-tag { font-size: 10.5px; color: var(--text-secondary); background: var(--bg-hover); padding: 2px 7px; border-radius: 99px; border: 0.5px solid var(--border-color); }
+.phc-tag-more { background: var(--bg-selected); color: var(--accent-color); font-weight: 700; cursor: pointer; border-color: transparent; }
 .phc-meta-row { display: flex; align-items: center; gap: 10px; }
 .phc-count { font-size: 11px; color: var(--text-secondary); opacity: 0.7; }
 .phc-count-zero { opacity: 0.4; }
