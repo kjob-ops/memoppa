@@ -1350,6 +1350,16 @@ function setupEventListeners() {
 
     if(maskToggleButton) maskToggleButton.addEventListener('click', () => { isMasked = !isMasked; updateMaskButtonIcon(); document.body.classList.toggle('mask-mode', isMasked); });
 
+    const sharePreviewCloseBtn = document.getElementById('sharePreviewCloseBtn');
+    if(sharePreviewCloseBtn) sharePreviewCloseBtn.addEventListener('click', () => {
+        document.getElementById('sharePreviewScreen')?.classList.add('hidden');
+        sessionStorage.removeItem('pendingShareId');
+        if (currentUser) {
+            appContainer?.classList.remove('hidden');
+        } else {
+            loginScreen?.classList.remove('hidden');
+        }
+    });
     if(settingsBtn) settingsBtn.addEventListener('click', () => { settingsModal.classList.remove('hidden'); settingsModal.style.display = 'flex'; applySettings(); renderProfileSettings(); });
     const profileSaveBtn = document.getElementById('profileSaveBtn');
     if(profileSaveBtn) profileSaveBtn.addEventListener('click', async () => {
