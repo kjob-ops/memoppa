@@ -2963,13 +2963,12 @@ function renderPromptHub(query = '', activeTag = null) {
         const card = document.createElement('div');
         card.className = `prompt-hub-card ${rarity.class} ${m.sharedRef ? 'is-shared' : ''}`;
         card.innerHTML = `
-            ${m.sharedRef ? '<div class="shared-ribbon">共有中</div>' : ''}
+            ${m.sharedRef ? '<div class="shared-ribbon phc-ribbon">共有中</div>' : ''}
             <div class="phc-card-head">
-                <span class="material-symbols-rounded phc-bolt">bolt</span>
                 <span id="rarityBadge_${m.id}"></span>
             </div>
             <div class="phc-left" data-id="${m.id}">
-                <div class="phc-title">${escapeHtml(m.title||'無題')}</div>
+                <div class="phc-title ${m.sharedRef ? 'phc-title-shared' : ''}">${escapeHtml(m.title||'無題')}</div>
                 <div class="phc-preview">${escapeHtml(preview)}</div>
                 ${tags.length ? (() => {
                     const isExpanded = expandedTagsIds.has(`phc_${m.id}`);
