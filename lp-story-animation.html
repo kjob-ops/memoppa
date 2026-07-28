@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>memoppa 体験ストーリー アニメーション案</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #16211d; --ink-soft: #5b6b64; --accent: #0F6E56; --accent-dark: #0a5a45;
+    --accent-tint: #e7f5f0; --paper: #fbfdfc; --line: #e2e8e4; --gold: #F5B92E; --gold-tint: #fdf3dc;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: 'Noto Sans JP', sans-serif; background: #eef2f0; padding: 48px 24px 100px; color: var(--ink); }
+  .material-symbols-rounded { font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24; }
+  h1 { text-align: center; font-size: 19px; margin-bottom: 6px; }
+  p.sub { text-align: center; color: var(--ink-soft); font-size: 13px; margin-bottom: 48px; }
+
+  .stage-wrap { display: flex; justify-content: center; }
+  .stage {
+    width: 420px; height: 520px; background: #fff; border-radius: 22px;
+    border: 1px solid var(--line); box-shadow: 0 40px 80px -30px rgba(15,110,86,0.28);
+    position: relative; overflow: hidden; padding: 28px;
+  }
+
+  /* 進捗インジケーター */
+  .progress-row { display: flex; gap: 6px; margin-bottom: 22px; }
+  .progress-dot { flex: 1; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+  .progress-dot .fill { height: 100%; width: 0%; background: var(--accent); }
+
+  .card-title { font-size: 20px; font-weight: 800; min-height: 30px; }
+  .card-title .cursor { display: inline-block; width: 2px; height: 18px; background: var(--accent); margin-left: 2px; animation: blink 0.9s infinite; vertical-align: -3px; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .card-body { font-size: 14px; line-height: 1.85; color: #2c3a34; margin-top: 12px; min-height: 90px; }
+  .var-chip { display: inline-flex; background: var(--gold-tint); color: #8a6a12; border: 1.5px dashed #e0b74a; border-radius: 6px; padding: 0 7px; font-weight: 700; opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; }
+  .var-chip.show { opacity: 1; transform: translateY(0); }
+
+  .bolt-badge { display: inline-flex; align-items: center; gap: 5px; background: var(--accent-tint); color: var(--accent); font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 99px; margin-top: 16px; opacity: 0; transform: scale(0.85); transition: opacity .3s, transform .3s; }
+  .bolt-badge.show { opacity: 1; transform: scale(1); }
+
+  .share-url-row { display: flex; align-items: center; gap: 8px; background: #f8faf9; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-top: 20px; font-size: 12px; color: var(--ink-soft); opacity: 0; transform: translateY(6px); transition: opacity .35s, transform .35s; }
+  .share-url-row.show { opacity: 1; transform: translateY(0); }
+  .share-url-row .material-symbols-rounded { color: var(--accent); font-size: 16px; }
+
+  .ribbon { position: absolute; top: 18px; left: -34px; width: 130px; text-align: center; background: var(--accent-dark); color: #fff; font-size: 10.5px; font-weight: 700; padding: 3px 0; transform: rotate(-45deg) scale(0); transition: transform .35s cubic-bezier(.34,1.56,.64,1); }
+  .ribbon.show { transform: rotate(-45deg) scale(1); }
+
+  .stats-row { display: flex; gap: 12px; margin-top: 28px; }
+  .stat-box { flex: 1; background: #f6faf8; border-radius: 12px; padding: 14px 8px; text-align: center; opacity: 0.4; transition: opacity .3s; }
+  .stat-box.active { opacity: 1; }
+  .stat-box .material-symbols-rounded { font-size: 18px; display: block; margin: 0 auto 4px; }
+  .stat-box.like .material-symbols-rounded { color: #e0356b; } .stat-box.copy .material-symbols-rounded { color: var(--accent); } .stat-box.save .material-symbols-rounded { color: #2563eb; }
+  .stat-box .num { font-size: 18px; font-weight: 800; }
+
+  .caption-box { text-align: center; margin-top: 22px; }
+  .caption-box .step-label { font-size: 12.5px; font-weight: 700; color: var(--accent); min-height: 18px; }
+
+  .note-box { max-width: 640px; margin: 40px auto 0; background: #fff; border: 1px dashed var(--line); border-radius: 14px; padding: 18px 22px; font-size: 13px; color: var(--ink-soft); line-height: 1.85; }
+  .note-box b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<h1>「使う→シェアする」体験ループアニメーション案</h1>
+<p class="sub">自動で再生されます（4幕・約10秒サイクル、無限ループ）</p>
+
+<div class="stage-wrap">
+  <div class="stage">
+    <div class="ribbon" id="ribbon">共有中</div>
+    <div class="progress-row">
+      <div class="progress-dot"><div class="fill" id="p1"></div></div>
+      <div class="progress-dot"><div class="fill" id="p2"></div></div>
+      <div class="progress-dot"><div class="fill" id="p3"></div></div>
+      <div class="progress-dot"><div class="fill" id="p4"></div></div>
+    </div>
+
+    <div class="card-title" id="cardTitle"><span class="cursor"></span></div>
+    <div class="card-body" id="cardBody"></div>
+    <div class="bolt-badge" id="boltBadge"><span class="material-symbols-rounded" style="font-size:13px;">bolt</span> プロンプト登録</div>
+    <div class="share-url-row" id="shareRow"><span class="material-symbols-rounded">link</span> memoppa.app/?share=xxxxxx</div>
+
+    <div class="stats-row">
+      <div class="stat-box like" id="statLike"><span class="material-symbols-rounded">favorite</span><span class="num" id="numLike">0</span></div>
+      <div class="stat-box copy" id="statCopy"><span class="material-symbols-rounded">content_copy</span><span class="num" id="numCopy">0</span></div>
+      <div class="stat-box save" id="statSave"><span class="material-symbols-rounded">download</span><span class="num" id="numSave">0</span></div>
+    </div>
+  </div>
+</div>
+<p class="caption-box"><span class="step-label" id="stepLabel"></span></p>
+
+<div class="note-box">
+  <b>4幕構成</b><br>
+  ① 書く — タイトルがタイプされる<br>
+  ② プロンプト登録 — <code>{{変数}}</code>が挿入され、⚡バッジが付く<br>
+  ③ シェア — URLが発行され、「共有中」リボンが表示される<br>
+  ④ 反応が届く — いいね・コピー・保存の数字が0から実際にカウントアップする<br>
+  この後①に戻って無限ループします。LPのヒーロー背景、または専用セクションとしての埋め込みを想定しています。
+</div>
+
+<script>
+const titleText = "キャッチコピー・アイデア出し";
+const bodyPlain = "について、思わずクリックしたくなるタイトル案を5つ出してください。";
+const cardTitle = document.getElementById('cardTitle');
+const cardBody = document.getElementById('cardBody');
+const boltBadge = document.getElementById('boltBadge');
+const shareRow = document.getElementById('shareRow');
+const ribbon = document.getElementById('ribbon');
+const stepLabel = document.getElementById('stepLabel');
+const progress = ['p1','p2','p3','p4'].map(id => document.getElementById(id));
+const stats = { like: document.getElementById('statLike'), copy: document.getElementById('statCopy'), save: document.getElementById('statSave') };
+const nums = { like: document.getElementById('numLike'), copy: document.getElementById('numCopy'), save: document.getElementById('numSave') };
+
+function resetProgress() { progress.forEach(p => p.style.width = '0%'); }
+function fillProgress(i, duration) {
+  const el = progress[i];
+  el.style.transition = 'none'; el.style.width = '0%';
+  requestAnimationFrame(() => { el.style.transition = `width ${duration}ms linear`; el.style.width = '100%'; });
+}
+
+function typeText(el, text, speed, cb) {
+  el.textContent = '';
+  let i = 0;
+  const t = setInterval(() => {
+    el.textContent = text.slice(0, i+1);
+    i++;
+    if (i >= text.length) { clearInterval(t); cb && cb(); }
+  }, speed);
+}
+
+function countUp(el, target, duration) {
+  const start = performance.now();
+  function tick(now) {
+    const p = Math.min(1, (now - start) / duration);
+    el.textContent = Math.round(p * target);
+    if (p < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+async function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function playLoop() {
+  // リセット
+  cardTitle.innerHTML = '<span class="cursor"></span>';
+  cardBody.innerHTML = '';
+  boltBadge.classList.remove('show');
+  shareRow.classList.remove('show');
+  ribbon.classList.remove('show');
+  Object.values(stats).forEach(s => s.classList.remove('active'));
+  Object.values(nums).forEach(n => n.textContent = '0');
+  resetProgress();
+
+  // 幕1：書く
+  stepLabel.textContent = '① 書く';
+  fillProgress(0, 2200);
+  await new Promise(resolve => {
+    let i = 0;
+    const t = setInterval(() => {
+      cardTitle.innerHTML = titleText.slice(0, i+1) + '<span class="cursor"></span>';
+      i++;
+      if (i >= titleText.length) { clearInterval(t); resolve(); }
+    }, 70);
+  });
+  await wait(400);
+
+  // 幕2：プロンプト登録
+  stepLabel.textContent = '② プロンプト登録';
+  fillProgress(1, 2200);
+  cardBody.innerHTML = '<span class="var-chip" id="chipTheme">{{テーマ}}</span>' + bodyPlain;
+  await wait(50);
+  document.getElementById('chipTheme').classList.add('show');
+  await wait(300);
+  boltBadge.classList.add('show');
+  await wait(1600);
+
+  // 幕3：シェア
+  stepLabel.textContent = '③ シェアする';
+  fillProgress(2, 2200);
+  shareRow.classList.add('show');
+  await wait(500);
+  ribbon.classList.add('show');
+  await wait(1700);
+
+  // 幕4：反応が届く
+  stepLabel.textContent = '④ 反応が届く';
+  fillProgress(3, 2600);
+  stats.like.classList.add('active'); countUp(nums.like, 12, 900);
+  await wait(400);
+  stats.copy.classList.add('active'); countUp(nums.copy, 34, 900);
+  await wait(400);
+  stats.save.classList.add('active'); countUp(nums.save, 6, 900);
+  await wait(1800);
+
+  playLoop();
+}
+playLoop();
+</script>
+
+</body>
+</html>

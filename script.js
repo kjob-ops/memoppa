@@ -711,8 +711,13 @@ function extractTags(text) {
     const plainText = text.replace(/<[^>]*>/g, ' ');
     const hashTags = plainText.match(/#([^\s#\[\]]+)/g) || [];
     const bracketTags = plainText.match(/\[([^\]]+)\]/g) || [];
-    const cleanedTags = new Set([...hashTags.map(t => t.substring(1).trim()), ...bracketTags.map(t => t.slice(1, -1).trim())]);
-    return Array.from(cleanedTags).filter(t => t.length > 0);
+    const isCssColorLike = (t) => /^[0-9a-fA-F]{3,8}[;,.]?$/.test(t);
+    const isSentenceLike = (t) => /[。、！？.!?]/.test(t) || t.length > 15 || /\s/.test(t);
+    const cleaned = [
+        ...hashTags.map(t => t.substring(1).trim()).filter(t => !isCssColorLike(t)),
+        ...bracketTags.map(t => t.slice(1, -1).trim()).filter(t => !isSentenceLike(t)),
+    ];
+    return Array.from(new Set(cleaned)).filter(t => t.length > 0);
 }
 
 function updateEditorTagsDisplay() {
@@ -857,7 +862,7 @@ async function bulkMailSend(btnElement) {
     let combinedBody = '';
     selectedMemos.forEach(id => {
         const m = memos.find(x => x.id === id);
-        if(m) combinedBody += `【${m.title || '無題のメモ'}】\n${m.content.replace(/<[^>]*>/g, '')}\n\n`;
+        if(m) combinedBody += `【${m.title || '無題のメモ'}】\n${(m.content||'').replace(/<[^>]*>/g, '')}\n\n`;
     });
 
     try {
@@ -968,7 +973,7 @@ function setupEventListeners() {
     if(multiPrivateBtn) multiPrivateBtn.addEventListener('click', () => handleMultiAction('private'));
     if(multiCopyBtn) multiCopyBtn.addEventListener('click', () => {
         let combinedText = '';
-        selectedMemos.forEach(id => { const m = memos.find(x => x.id === id); if(m) combinedText += `${m.title || '無題のメモ'}\n${m.content.replace(/<[^>]*>/g, '')}\n\n`; });
+        selectedMemos.forEach(id => { const m = memos.find(x => x.id === id); if(m) combinedText += `${m.title || '無題のメモ'}\n${(m.content||'').replace(/<[^>]*>/g, '')}\n\n`; });
         navigator.clipboard.writeText(combinedText).then(() => {
             const originalHtml = multiCopyBtn.innerHTML; multiCopyBtn.innerHTML = '<span class="material-symbols-rounded" style="color:var(--accent-color);">check</span> Copied';
             showToast('メモをコピーしました', 'content_copy');
@@ -1198,6 +1203,7 @@ function setupEventListeners() {
                 currentSearch = selectedTags.length > 0 ? '' : currentSearch;
                 renderMobileSearchSidebarTags();
                 renderMemoList();
+                renderSearchMode();
             });
             chips.appendChild(btn);
         });
@@ -1489,7 +1495,7 @@ function setupEventListeners() {
             let markdownOutput = `# memoppa AI Knowledge Export\n\nGenerated on: ${new Date().toLocaleString()}\n\n---\n\n`;
             filteredMemos.forEach(m => {
                 const title = m.title || "無題のメモ"; const date = new Date(m.updatedAt).toLocaleString();
-                const content = m.content.replace(/<br\s*\/?>/mg, "\n").replace(/<[^>]*>/g, "");
+                const content = (m.content||'').replace(/<br\s*\/?>/mg, "\n").replace(/<[^>]*>/g, "");
                 const tags = extractTags(m.content).map(t => `#${t}`).join(' ');
                 markdownOutput += `## ${title}\n**Date:** ${date}\n`; if(tags) markdownOutput += `**Tags:** ${tags}\n`; markdownOutput += `\n${content}\n\n---\n\n`;
             });
@@ -1747,9 +1753,12 @@ function togglePromptFlag() {
         m.isPrompt = !m.isPrompt;
         // 無題のまま登録された場合、本文1行目からタイトルを自動設定
         if (m.isPrompt && !m.title) {
-            const firstLine = getPlainContent(m).split('\n').find(l => l.trim()) || '';
+            const lines = getPlainContent(m).split('\n').map(l => l.trim()).filter(l => l);
+            // 「―――」「===」「■■■」のような装飾的な区切り行はタイトル候補から除外
+            const isDecorative = (l) => /^[\-=＝ー―─━_・\.\*※■□★☆▼▽▲△○●◆◇〜~#]+$/.test(l) || l.replace(/[\s　]/g, '').length === 0;
+            const firstLine = lines.find(l => !isDecorative(l)) || lines[0] || '';
             if (firstLine) {
-                m.title = firstLine.trim().slice(0, 30);
+                m.title = firstLine.replace(/^[■□★☆▼▽▲△○●◆◇\-=＝ー―─━_・\*※]+\s*/, '').trim().slice(0, 30);
                 if (currentMemoId === m.id && memoTitle) memoTitle.value = m.title;
             }
         }
@@ -1791,7 +1800,7 @@ function saveVarValues(memoId, values) {
 
 function getPlainContent(memo) {
     const div = document.createElement('div');
-    div.innerHTML = memo.content.replace(/<div>/gi, '\n').replace(/<br\s*\/?>/gi, '\n');
+    div.innerHTML = (memo.content||'').replace(/<div>/gi, '\n').replace(/<br\s*\/?>/gi, '\n');
     return div.innerText || div.textContent || '';
 }
 
@@ -2043,7 +2052,7 @@ function renderSearchMode() {
         if (titleEmpty && bodyEmpty) return false;
         if (m.isTrashed || m.isPrivate) return false;
         if (currentSearch) {
-            const plainText = m.content.replace(/<[^>]*>/g, '').toLowerCase();
+            const plainText = (m.content||'').replace(/<[^>]*>/g, '').toLowerCase();
             if (!(m.title || '').toLowerCase().includes(currentSearch) && !plainText.includes(currentSearch)) return false;
         }
         if (selectedTags.length > 0) {
@@ -2067,7 +2076,7 @@ function renderSearchMode() {
         promptResults.forEach(m => {
             const card = document.createElement('div');
             card.className = 'sm-card sm-card-prompt';
-            const preview = m.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+            const preview = (m.content||'').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
             card.innerHTML = `
                 <div class="sm-card-title">
                     <span class="material-symbols-rounded sm-bolt">bolt</span>
@@ -2109,7 +2118,7 @@ function renderSearchMode() {
     results.forEach(m => {
         const card = document.createElement('div');
         card.className = 'sm-card';
-        const preview = m.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+        const preview = (m.content||'').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
         card.innerHTML = `
             <div class="sm-card-title">
                 ${m.isPinned ? '<span class="material-symbols-rounded sm-pin">push_pin</span>' : ''}
@@ -2947,7 +2956,7 @@ function renderPromptHub(query = '', activeTag = null) {
     list.innerHTML = '';
     prompts.forEach(m => {
         const tags = extractTags(m.content);
-        const preview = m.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0, 80);
+        const preview = (m.content||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0, 80);
         // レアリティは「自分がコピーした回数」ではなく、共有経由で他者に使われた回数（インポート数＋インポート先での使用数）で判定する。
         // 未共有のプロンプトは常にノーマル表示。共有済みなら統計を非同期取得してから確定する。
         const rarity = getRarity(0);
@@ -2989,7 +2998,7 @@ function renderPromptHub(query = '', activeTag = null) {
             const copyBtn = e.currentTarget;
             const hasVars = /\{\{[^}]+\}\}/.test(m.content);
             if(hasVars) { copyPromptWithVars(m); return; }
-            const text = m.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+            const text = (m.content||'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
             navigator.clipboard.writeText(text).then(() => {
                 copyBtn.innerHTML = '<span class="material-symbols-rounded">check</span> コピー済';
                 copyBtn.classList.add('copied');
@@ -3152,8 +3161,15 @@ function getFilteredMemos() {
 
     if (currentSearch) {
         filtered = filtered.filter(m => {
-            const plainText = m.content.replace(/<[^>]*>/g, '').toLowerCase();
-            return m.title.toLowerCase().includes(currentSearch) || plainText.includes(currentSearch);
+            const plainText = (m.content || '').replace(/<[^>]*>/g, '').toLowerCase();
+            return (m.title || '').toLowerCase().includes(currentSearch) || plainText.includes(currentSearch);
+        });
+    }
+    if (selectedTags.length > 0) {
+        filtered = filtered.filter(m => {
+            const memoTags = extractTags(m.content).map(t => t.toLowerCase());
+            const targets = selectedTags.map(t => t.toLowerCase());
+            return tagSearchMode === 'and' ? targets.every(t => memoTags.includes(t)) : targets.some(t => memoTags.includes(t));
         });
     }
     const sortType = sortOptions[currentSortIndex].id;
@@ -3213,7 +3229,7 @@ function renderMemoList() {
 
         let titleText = memo.title ? memo.title : '無題のメモ';
         const isUntitled = !memo.title;
-        let preview = memo.content.replace(/<[^>]*>/g, '').substring(0, 40) || 'Empty';
+        let preview = (memo.content||'').replace(/<[^>]*>/g, '').substring(0, 40) || 'Empty';
         if (memo.isPrivate) { titleText = `🔒 Secret`; preview = 'Classified document...'; }
 
         const tags = extractTags(memo.content);
@@ -3308,7 +3324,7 @@ function renderMemoList() {
         const startPress = (e) => {
             if (e.target.closest('.drag-handle') || e.target.closest('.list-actions') || e.target.closest('.checkbox-wrapper')) return;
             if (e.touches) { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }
-            pressTimer = setTimeout(() => { toggleMultiSelect(memo.id); }, 500);
+            pressTimer = setTimeout(() => { if (!isSwiping) toggleMultiSelect(memo.id); }, 500);
         };
         const cancelPress = (e) => {
             if (e.type === 'touchmove' && e.touches) {
@@ -3325,21 +3341,29 @@ function renderMemoList() {
         item.addEventListener('mouseup', cancelPress);
         item.addEventListener('mouseleave', cancelPress);
 
-        let isSwiping = false, swipeStartX = 0, swipeStartY = 0, currentX = 0;
+        let isSwiping = false, swipeStartX = 0, swipeStartY = 0, currentX = 0, swipeDecided = false;
         item.addEventListener('touchstart', e => {
             if (multiSelectMode || memo.isTrashed || e.target.closest('.drag-handle') || e.target.closest('.list-actions') || e.target.closest('.checkbox-wrapper')) return;
             swipeStartX = e.touches ? e.touches[0].clientX : e.clientX;
             swipeStartY = e.touches ? e.touches[0].clientY : e.clientY;
-            isSwiping = true; item.style.transition = 'none';
+            isSwiping = false; swipeDecided = false; item.style.transition = 'none';
         }, {passive: true});
 
         item.addEventListener('touchmove', e => {
-            if (!isSwiping) return;
+            if (swipeDecided && !isSwiping) return; // 縦スクロールと判定済みなら何もしない
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             const diffX = clientX - swipeStartX;
             const diffY = clientY - swipeStartY;
-            if (Math.abs(diffY) > Math.abs(diffX)) { isSwiping = false; item.style.transform = `translateX(0)`; return; }
+            // 判定がまだの場合、明確に横方向優位＆一定距離を超えるまではスワイプとして扱わない
+            if (!swipeDecided) {
+                if (Math.abs(diffX) < 12 && Math.abs(diffY) < 12) return; // 誤差レベルの揺れは無視
+                swipeDecided = true;
+                if (Math.abs(diffX) <= Math.abs(diffY) * 1.3) { isSwiping = false; return; } // 縦優位＝スクロールに委ねる
+                isSwiping = true;
+                clearTimeout(pressTimer); // スワイプ確定と同時に長押しを確実にキャンセル
+            }
+            if (!isSwiping) return;
             if(e.cancelable) e.preventDefault(); 
             currentX = diffX;
             item.style.transform = `translateX(${currentX}px)`;
@@ -3349,7 +3373,7 @@ function renderMemoList() {
 
         item.addEventListener('touchend', () => {
             if (!isSwiping) return;
-            isSwiping = false; item.style.transition = 'transform 0.2s ease-out';
+            isSwiping = false; swipeDecided = false; item.style.transition = 'transform 0.2s ease-out';
             if (Math.abs(currentX) > window.innerWidth * 0.3) {
                 item.style.transform = `translateX(${currentX > 0 ? 100 : -100}%)`;
                 setTimeout(() => { directDelete(memo.id); }, 200);
