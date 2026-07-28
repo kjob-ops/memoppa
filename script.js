@@ -986,6 +986,11 @@ function setupEventListeners() {
         if (selectedMemos.size === 0) exitMultiSelect(); else { if(selectedCountText) selectedCountText.textContent = `${selectedMemos.size} Selected`; renderMemoList(); }
     });
 
+    const rarityInfoModal = document.getElementById('rarityInfoModal');
+    const rarityInfoCloseBtn = document.getElementById('rarityInfoCloseBtn');
+    if (rarityInfoCloseBtn) rarityInfoCloseBtn.addEventListener('click', () => rarityInfoModal?.classList.add('hidden'));
+    rarityInfoModal?.querySelector('.rarity-info-backdrop')?.addEventListener('click', () => rarityInfoModal.classList.add('hidden'));
+
     if(mobileMenuBtn && mobileActionMenu) {
         mobileMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2518,10 +2523,9 @@ async function openShareReviewModal(memo) {
     modal.innerHTML = `
         <div class="share-review-box">
             <div class="share-review-header">
+                <button id="shareReviewBackBtn" class="close-modal-btn" title="戻る"><span class="material-symbols-rounded">arrow_back</span></button>
                 <h3 id="shareReviewHeading">⚡ シェアの準備</h3>
-                <button class="share-review-close"><span class="material-symbols-rounded">close</span></button>
             </div>
-            <p class="share-review-var-hint">💡 <code>{{変数}}</code>とは？ — 受け取った人が自分の情報で穴埋めして使える「空欄」の印です。</p>
             ${authorProfile && !authorProfile.profileCustomized ? `
                 <div class="share-review-nickname">
                     <label for="shareReviewNickname">🏷️ 表示名（あとで設定からも変更できます）</label>
@@ -2536,6 +2540,7 @@ async function openShareReviewModal(memo) {
                         <p>受け取った人が自分の情報で穴埋めして使えます。チップをタップすると元に戻せます。</p>
                     </div>
                 </div>
+                <p class="share-review-var-hint">💡 <code>{{変数}}</code>とは？ — 受け取った人が自分の情報で穴埋めして使える「空欄」の印です。</p>
             ` : `
                 <div class="share-review-safe">
                     <span class="material-symbols-rounded">check_circle</span>
@@ -2682,7 +2687,7 @@ async function openShareReviewModal(memo) {
     }
 
     function closeModal() { modal.classList.remove('show'); setTimeout(() => modal.remove(), 250); }
-    modal.querySelector('.share-review-close').addEventListener('click', closeModal);
+    modal.querySelector('#shareReviewBackBtn').addEventListener('click', closeModal);
     modal.querySelector('.share-review-cancel').addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
@@ -2928,6 +2933,38 @@ function calcGrowthScore(data) {
     return (data.importCount || 0) * 2 + (data.previewCopyCount || 0) * 1 + (data.likeCount || 0) * 1;
 }
 
+// 具体的な閾値の数字はユーザーに見せず、次の段階までの近さだけをパーセントで返す
+function getRarityProgress(score) {
+    const B = 5, S = 20, G = 60;
+    if (score >= G) return { level: 'gold', pct: 100 };
+    if (score >= S) return { level: 'silver', pct: Math.min(100, Math.round(((score - S) / (G - S)) * 100)) };
+    if (score >= B) return { level: 'bronze', pct: Math.min(100, Math.round(((score - B) / (S - B)) * 100)) };
+    return { level: 'normal', pct: Math.min(100, Math.round((score / B) * 100)) };
+}
+
+function showRarityInfo(score) {
+    const modal = document.getElementById('rarityInfoModal');
+    if (!modal) return;
+    const progress = getRarityProgress(score);
+    modal.querySelectorAll('.rarity-tier-item').forEach(el => el.classList.remove('current-tier'));
+    const progressWrap = document.getElementById('rarityInfoProgressWrap');
+    const progressLabel = document.getElementById('rarityInfoProgressLabel');
+    const progressFill = document.getElementById('rarityInfoProgressFill');
+    if (score === null || score === undefined) {
+        progressWrap.classList.add('hidden');
+    } else if (progress.level === 'gold') {
+        modal.querySelector('.rarity-tier-item[data-tier="gold"]')?.classList.add('current-tier');
+        progressWrap.classList.add('hidden');
+    } else {
+        if (progress.level !== 'normal') modal.querySelector(`.rarity-tier-item[data-tier="${progress.level}"]`)?.classList.add('current-tier');
+        progressWrap.classList.remove('hidden');
+        const stageLabel = progress.pct >= 67 ? 'あと少しで次のステージ' : progress.pct >= 34 ? '順調に育っています' : '育ちはじめ';
+        progressLabel.textContent = stageLabel;
+        progressFill.style.width = `${progress.pct}%`;
+    }
+    modal.classList.remove('hidden');
+}
+
 function closeAllPhcMenus() {
     document.querySelectorAll('.phc-more-menu').forEach(el => el.remove());
 }
@@ -2964,8 +3001,8 @@ function renderPromptHub(query = '', activeTag = null) {
         card.className = `prompt-hub-card ${rarity.class} ${m.sharedRef ? 'is-shared' : ''}`;
         card.innerHTML = `
             ${m.sharedRef ? '<div class="shared-ribbon phc-ribbon">共有中</div>' : ''}
-            <div class="phc-card-head">
-                <span id="rarityBadge_${m.id}"></span>
+            <div class="phc-card-head" data-id="${m.id}">
+                <span id="rarityBadge_${m.id}"><span class="phc-rarity-hint" title="プロンプトが育つ仕組み">？</span></span>
             </div>
             <div class="phc-left" data-id="${m.id}">
                 <div class="phc-title ${m.sharedRef ? 'phc-title-shared' : ''}">${escapeHtml(m.title||'無題')}</div>
@@ -2982,7 +3019,7 @@ function renderPromptHub(query = '', activeTag = null) {
             </div>
             <div class="phc-actions">
                 <button class="phc-copy-btn" data-id="${m.id}" title="コピー"><span class="material-symbols-rounded">content_copy</span> コピー</button>
-                <button class="phc-share-btn" data-id="${m.id}" title="共有URLを生成"><span class="material-symbols-rounded">share</span></button>
+                <button class="phc-share-btn" data-id="${m.id}" title="共有する"><span class="material-symbols-rounded">share</span></button>
                 <button class="phc-edit-btn" data-id="${m.id}" title="編集"><span class="material-symbols-rounded">edit</span></button>
                 <button class="phc-more-btn" data-id="${m.id}" title="その他"><span class="material-symbols-rounded">more_vert</span></button>
             </div>`;
@@ -3085,6 +3122,11 @@ function renderPromptHub(query = '', activeTag = null) {
         });
         // カード左クリックで編集
         card.querySelector('.phc-left').addEventListener('click', () => { setFilter('all'); selectMemo(m.id); });
+        card.querySelector('.phc-card-head').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const score = card.dataset.growthScore !== undefined ? Number(card.dataset.growthScore) : (m.sharedRef ? undefined : null);
+            showRarityInfo(score);
+        });
         list.appendChild(card);
         // 共有統計を非同期取得（インポート数＋インポート先での使用数 → レアリティに反映）
         if (m.sharedRef) {
@@ -3106,8 +3148,9 @@ function renderPromptHub(query = '', activeTag = null) {
                         const rarity = getRarity(calcGrowthScore(data));
                         card.classList.remove('rarity-normal', 'rarity-bronze', 'rarity-silver', 'rarity-gold');
                         card.classList.add(rarity.class);
+                        card.dataset.growthScore = calcGrowthScore(data);
                         const badgeEl = document.getElementById(`rarityBadge_${m.id}`);
-                        if (badgeEl) badgeEl.innerHTML = rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : '';
+                        if (badgeEl) badgeEl.innerHTML = rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : '<span class="phc-rarity-hint" title="プロンプトが育つ仕組み">？</span>';
                     }
                 } catch(e) {}
             })();

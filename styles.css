@@ -856,10 +856,8 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-review-modal.show { opacity: 1; }
 .share-review-box { background: var(--bg-primary); border-radius: 16px; width: 100%; max-width: 520px; max-height: 86vh; overflow-y: auto; padding: 24px; box-shadow: 0 12px 48px rgba(0,0,0,0.2); transform: translateY(12px); transition: transform 0.2s; }
 .share-review-modal.show .share-review-box { transform: translateY(0); }
-.share-review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.share-review-header { display: flex; align-items: center; gap: 10px; justify-content: flex-start; margin-bottom: 16px; }
 .share-review-header h3 { font-size: 17px; font-weight: 700; }
-.share-review-close { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--bg-hover); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.share-review-close:hover { background: var(--danger-color); color: white; }
 .share-review-var-hint { font-size: 12px; color: var(--text-secondary); background: var(--bg-hover); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
 .settings-text-input { width: 100%; padding: 11px 14px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-md); font-size: 14px; outline: none; font-family: inherit; }
 .settings-text-input:focus { border-color: var(--accent-color); }
@@ -887,7 +885,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .finding-var { color: var(--accent-color); font-weight: 600; font-family: monospace; flex-shrink: 0; }
 .share-review-preview-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .share-review-preview { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; font-size: 12.5px; color: #374151; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular','Consolas',monospace; white-space: pre-wrap; word-break: break-word; }
-.share-review-actions { display: flex; gap: 10px; }
+.share-review-actions { display: flex; gap: 10px; flex-shrink: 0; }
 .share-review-cancel { flex: 1; padding: 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-hover); color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-color); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
 .share-review-confirm:hover { filter: brightness(1.08); }
@@ -913,7 +911,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .phc-ribbon { top: 12px; left: auto; right: -28px; width: 110px; transform: rotate(45deg); }
 .phc-title-shared { padding-right: 58px; }
 .prompt-hub-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
-.phc-card-head { display: flex; align-items: center; justify-content: space-between; }
+.phc-card-head { display: flex; align-items: center; justify-content: space-between; cursor: pointer; min-height: 18px; }
 .phc-left { flex: 1; cursor: pointer; min-width: 0; margin-bottom: 12px; }
 .phc-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .phc-preview { font-size: 12px; color: var(--text-secondary); line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 8px; }
@@ -936,7 +934,30 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .phc-share-btn, .phc-edit-btn { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border-color); background: var(--bg-hover); color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.15s; font-family: inherit; flex-shrink: 0; }
 .phc-share-btn:hover, .phc-edit-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
 .phc-share-btn .material-symbols-rounded, .phc-edit-btn .material-symbols-rounded { font-size: 16px; }
-.phc-rarity-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 99px; letter-spacing: 0.06em; margin-bottom: 8px; }
+.phc-rarity-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 99px; letter-spacing: 0.06em; margin-bottom: 8px; cursor: pointer; }
+.phc-rarity-hint { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--bg-hover); color: var(--text-secondary); font-size: 10.5px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+
+/* ===== レアリティ説明モーダル ===== */
+.rarity-info-modal { position: fixed; inset: 0; z-index: 300; display: flex; align-items: flex-end; justify-content: center; }
+.rarity-info-modal.hidden { display: none; }
+.rarity-info-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.4); }
+.rarity-info-sheet { position: relative; background: var(--bg-primary); width: 100%; max-width: 420px; border-radius: 20px 20px 0 0; padding: 26px 24px 32px; box-shadow: 0 -10px 30px rgba(0,0,0,0.2); }
+@media (min-width: 769px) { .rarity-info-modal { align-items: center; } .rarity-info-sheet { border-radius: 18px; max-width: 380px; } }
+.rarity-info-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--bg-hover); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.rarity-info-sheet h3 { margin: 0 0 10px; font-size: 17px; font-weight: 800; }
+.rarity-info-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.8; margin: 0 0 20px; }
+.rarity-tier-row { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.rarity-tier-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--bg-hover); border-radius: 12px; opacity: 0.5; transition: opacity 0.2s; }
+.rarity-tier-item.current-tier { opacity: 1; outline: 2px solid var(--accent-color); outline-offset: -2px; }
+.rarity-tier-note { font-size: 11.5px; color: var(--text-secondary); }
+.rarity-tier-badge { font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+.rarity-tier-badge.bronze-badge { background: linear-gradient(90deg, #d97706, #b45309); color: white; }
+.rarity-tier-badge.silver-badge { background: linear-gradient(90deg, #94a3b8, #64748b); color: white; }
+.rarity-tier-badge.gold-badge { background: linear-gradient(90deg, #fbbf24, #fde68a, #fbbf24); color: #78350f; }
+.rarity-info-progress-wrap.hidden { display: none; }
+.rarity-info-progress-label { font-size: 12px; font-weight: 700; color: var(--accent-color); margin-bottom: 8px; }
+.rarity-info-progress-track { height: 8px; background: var(--bg-hover); border-radius: 99px; overflow: hidden; }
+.rarity-info-progress-fill { height: 100%; background: var(--accent-color); border-radius: 99px; transition: width 0.4s ease; }
 
 /* ノーマル */
 .rarity-normal { border-color: var(--border-color); }
@@ -1143,12 +1164,13 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     .share-review-box {
         width: 100vw !important;
         max-width: 100vw !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
         border-radius: 0 !important;
         display: flex !important;
         flex-direction: column !important;
         padding: 20px 20px 24px 20px !important;
+        overflow-y: auto !important;
     }
     .share-review-live-text {
         flex: 1 !important;

@@ -235,6 +235,24 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     <span class="material-symbols-rounded">edit</span><span class="fab-text">作成</span>
                 </button>
             </div>
+
+            <div id="rarityInfoModal" class="rarity-info-modal hidden">
+                <div class="rarity-info-backdrop"></div>
+                <div class="rarity-info-sheet">
+                    <button id="rarityInfoCloseBtn" class="rarity-info-close"><span class="material-symbols-rounded">close</span></button>
+                    <h3>プロンプトが育つ仕組み</h3>
+                    <p class="rarity-info-desc">シェアしたプロンプトは、誰かに使われるたびに少しずつ育っていきます。使われた分だけ、カードの見た目が変わっていきます。</p>
+                    <div class="rarity-tier-row">
+                        <div class="rarity-tier-item" data-tier="bronze"><span class="rarity-tier-badge bronze-badge">🥉 BRONZE</span><span class="rarity-tier-note">育ちはじめ</span></div>
+                        <div class="rarity-tier-item" data-tier="silver"><span class="rarity-tier-badge silver-badge">🥈 SILVER</span><span class="rarity-tier-note">よく使われている</span></div>
+                        <div class="rarity-tier-item" data-tier="gold"><span class="rarity-tier-badge gold-badge">✨ GOLD</span><span class="rarity-tier-note">みんなの人気者</span></div>
+                    </div>
+                    <div id="rarityInfoProgressWrap" class="rarity-info-progress-wrap hidden">
+                        <div class="rarity-info-progress-label" id="rarityInfoProgressLabel"></div>
+                        <div class="rarity-info-progress-track"><div class="rarity-info-progress-fill" id="rarityInfoProgressFill"></div></div>
+                    </div>
+                </div>
+            </div>
             <div id="searchModeView" class="search-mode-view hidden">
               <div class="search-mode-inner">
                 <div class="search-mode-header pc-only">
@@ -298,7 +316,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
             <div id="mobileActionMenu" class="mobile-action-menu hidden mobile-only" style="display: none;">
                 <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> <span id="actionPrivateLabel">非公開にする</span></button>
-                <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
+                <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有する</button>
                 <button id="actionMailBtn2" class="menu-item"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                 <div class="menu-divider"></div>
                 <button id="actionDeleteBtn" class="menu-item danger"><span class="material-symbols-rounded">delete</span> 削除</button>
@@ -324,11 +342,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <button id="mainPinBtn" class="action-btn" title="ピン留め・解除"><span class="material-symbols-rounded">push_pin</span></button>
                         <button id="mainPrivateBtn" class="action-btn" title="非公開・解除"><span class="material-symbols-rounded">visibility_off</span></button>
                         <button id="mainCopyBtn" class="action-btn" title="本文をコピー Ctrl+Shift+C"><span class="material-symbols-rounded">content_copy</span></button>
+                        <button id="mainShareBtn" class="action-btn" title="共有する"><span class="material-symbols-rounded">share</span></button>
                         <div class="action-divider"></div>
                         <div class="action-more-wrap">
                             <button id="mainMoreBtn" class="action-btn" title="その他の操作"><span class="material-symbols-rounded">more_horiz</span></button>
                             <div id="memoMoreMenu" class="memo-more-menu hidden">
-                                <button id="mainShareBtn" class="more-menu-item" title="共有URLを生成"><span class="material-symbols-rounded">share</span> 共有URLをコピー</button>
                                 <button id="mainMailBtn" class="more-menu-item" title="Send to Mail"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                                 <div class="more-menu-divider"></div>
                                 <button id="mainDeleteBtn" class="more-menu-item danger" title="削除"><span class="material-symbols-rounded">delete</span> 削除</button>
