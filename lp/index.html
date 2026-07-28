@@ -112,17 +112,6 @@
   .demo-stats .material-symbols-rounded { font-size: 15px; }
   .demo-copy-btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; border: none; padding: 9px 16px; border-radius: 10px; font-weight: 700; font-size: 12.5px; cursor: pointer; }
   .demo-copy-btn.done { background: var(--accent-dark); }
-  .float-chip {
-    position: absolute; background: #fff; border: 1px solid var(--line); border-radius: 12px;
-    padding: 8px 12px; font-size: 12px; font-weight: 700; box-shadow: 0 12px 30px -10px rgba(0,0,0,0.15);
-    display: flex; align-items: center; gap: 6px;
-  }
-  .float-chip .material-symbols-rounded { font-size: 15px; }
-  .float-chip.like { top: -14px; right: 26px; color: #e0356b; }
-  .float-chip.like .material-symbols-rounded { color: #e0356b; }
-  .float-chip.copy { bottom: -14px; left: 10px; color: var(--accent); }
-  .float-chip.copy .material-symbols-rounded { color: var(--accent); }
-  @media (max-width: 500px) { .float-chip { display: none; } }
 
   /* ===== 課題提起 ===== */
   .problem { background: var(--ink); color: #fff; }
@@ -269,8 +258,6 @@
     </div>
 
     <div class="demo-card-wrap">
-      <div class="float-chip like"><span class="material-symbols-rounded">favorite</span> 12</div>
-      <div class="float-chip copy"><span class="material-symbols-rounded">content_copy</span> 34</div>
       <div class="demo-card">
         <div class="demo-ribbon">共有中</div>
         <div class="demo-badge"><span class="material-symbols-rounded" style="font-size:13px;">bolt</span> 共有されたプロンプト</div>
