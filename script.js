@@ -4,7 +4,7 @@ import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, a
 
 const firebaseConfig = {
   apiKey: "AIzaSyAj5Y7PLvRLRRl8Ay1JMUWjJsbgCAqygG0",
-  authDomain: "pepper-c6683.firebaseapp.com",
+  authDomain: "auth.memoppa.app",
   projectId: "pepper-c6683",
   storageBucket: "pepper-c6683.firebasestorage.app",
   messagingSenderId: "884448331927",
@@ -101,14 +101,12 @@ const cancelMultiSelectBtn = document.getElementById('cancelMultiSelectBtn');
 const selectedCountText = document.getElementById('selectedCountText');
 const multiSelectAllBtn = document.getElementById('multiSelectAllBtn');
 const multiPinBtn = document.getElementById('multiPinBtn');
-const multiArchiveBtn = document.getElementById('multiArchiveBtn');
 const multiTrashBtn = document.getElementById('multiTrashBtn');
 const multiPrivateBtn = document.getElementById('multiPrivateBtn');
 const multiCopyBtn = document.getElementById('multiCopyBtn');
 
 const searchInput = document.getElementById('searchInput'); 
 const allBtn = document.getElementById('allBtn');
-const archiveBtn = document.getElementById('archiveBtn');
 const trashBtn = document.getElementById('trashBtn'); 
 const sortBtn = document.getElementById('sortBtn'); 
 const searchClearBtn = document.getElementById('searchClearBtn');
@@ -1020,8 +1018,6 @@ function setupEventListeners() {
     }
 
     if(actionPinBtn) actionPinBtn.addEventListener('click', () => { togglePin(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
-    const actionPromptBtn = document.getElementById('actionPromptBtn');
-    if(actionPromptBtn) actionPromptBtn.addEventListener('click', () => { togglePromptFlag(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
     if(actionPrivateBtn) actionPrivateBtn.addEventListener('click', () => { togglePrivate(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
     const actionShareBtn2 = document.getElementById('actionShareBtn2');
     const actionMailBtn2 = document.getElementById('actionMailBtn2');
@@ -2406,15 +2402,6 @@ async function showSharePreview(shareId, isLoggedIn = false) {
             }).catch(() => {
                 showCopyFallback(displayText);
             });
-        });
-
-        // ---- Xシェアボタン ----
-        const xBtn = document.getElementById('sharePreviewXBtn');
-        if(xBtn) xBtn.addEventListener('click', () => {
-            const shareUrl = `${location.origin}/?share=${encodeURIComponent(shareId)}`;
-            const tweetText = `「${data.title || 'プロンプト'}」\n\nmemoppaでプロンプトが共有されています👇\n`;
-            const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(shareUrl)}`;
-            window.open(intent, '_blank', 'noopener');
         });
 
         // ---- 保存ボタン（ログイン済み → 「保存する」、未ログイン → 「ログインして保存」）----
