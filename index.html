@@ -64,6 +64,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
             <div class="share-preview-badge"><span class="material-symbols-rounded">bolt</span> 共有されたプロンプト</div>
             <h2 id="sharePreviewTitle" class="share-preview-title"></h2>
+            <div id="sharePreviewCharCount" class="share-preview-charcount"></div>
             <div id="sharePreviewAuthor" class="share-preview-author"></div>
             <!-- リアルタイムカウンター -->
             <div id="sharePreviewStats" class="share-preview-stats">
@@ -72,7 +73,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <span id="spStatSave" class="sp-stat"><span class="material-symbols-rounded">download</span><span id="spSaveCount">-</span></span>
             </div>
             <div id="sharePreviewContent" class="share-preview-content"></div>
-            <div id="sharePreviewCharCount" class="share-preview-charcount"></div>
             <div class="share-preview-actions">
                 <button id="sharePreviewLikeBtn" class="share-preview-like-btn">
                     <span class="material-symbols-rounded">favorite</span> いいね
@@ -148,7 +148,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             
             <div class="sidebar-actions-grid">
                 <button id="newMemoBtn" class="new-btn-full pc-only"><span class="material-symbols-rounded">add</span> 新規メモ</button>
-                <button id="searchBackBtn" class="search-back-btn hidden"><span class="material-symbols-rounded">arrow_back</span> リストに戻る</button>
             </div>
 
             <div id="multiSelectControls" class="multi-select-controls hidden">
@@ -358,6 +357,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <div class="textarea-container">
                     <div class="memo-title-wrap">
                         <input type="text" id="memoTitle" class="memo-title" placeholder="タイトル...">
+                        <div id="memoUpdatedAt" class="memo-updated-at pc-only"></div>
+                        <div id="memoUpdatedAtMobile" class="memo-updated-at-mobile mobile-only"></div>
                     </div>
                     <div id="memoContent" class="memo-content" contenteditable="true" data-placeholder="入力を始めてください。#タグ や [リンク] でアイデアをつなげられます。（Ctrl/Cmd+B で太字、⚡登録でプロンプト庫へ）"></div>
                 </div>
