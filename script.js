@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment } from "firebase/firestore";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment, query, where, getDocs, limit } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAj5Y7PLvRLRRl8Ay1JMUWjJsbgCAqygG0",
@@ -668,6 +668,7 @@ if(switchAccountBtn) switchAccountBtn.addEventListener('click', async () => {
 // DB読み込み
 // ==========================================
 let unsubscribeMemos = null;
+let hasInitializedMemoSelection = false; // ログイン直後は常に未選択（トップ画面）から開始するためのフラグ
 // ゴミ箱のメモは10日経過で自動削除（サーバー不要・クライアント側チェック）
 const TRASH_RETENTION_DAYS = 10;
 function purgeExpiredTrash() {
@@ -682,6 +683,7 @@ function purgeExpiredTrash() {
 
 function initRealtimeMemos() {
     if (unsubscribeMemos) unsubscribeMemos();
+    hasInitializedMemoSelection = false; // 新しいログインセッションのたびにリセット
     const memosRef = collection(db, "users", currentUser.uid, "memos");
     unsubscribeMemos = onSnapshot(memosRef, (snapshot) => {
         memos = [];
@@ -689,7 +691,11 @@ function initRealtimeMemos() {
         purgeExpiredTrash();
         
         // オンボーディングは loadUserSettings の hasSeenOnboarding フラグで表示される
-        if (!currentMemoId || !memos.some(m => m.id === currentMemoId)) {
+        if (!hasInitializedMemoSelection) {
+            // ログイン直後の最初の1回だけは、何も選択しないトップ画面から開始する
+            // （「前回開いていたメモ」はサイドバーのショートカットからワンタップで開ける）
+            hasInitializedMemoSelection = true;
+        } else if (!currentMemoId || !memos.some(m => m.id === currentMemoId)) {
             let lastId = null;
             try { lastId = localStorage.getItem('memoppa_lastMemoId'); } catch(e) {}
             const lastMemo = lastId ? memos.find(m => m.id === lastId && !m.isTrashed) : null;
@@ -703,8 +709,24 @@ function initRealtimeMemos() {
                 updateEditorTagsDisplay(); updateCharCount();
             }
         }
-        updateSidebarTags(); renderMemoList();
+        updateSidebarTags(); renderMemoList(); renderLastMemoShortcut();
     });
+}
+
+// サイドバー上部の「前回開いていたメモ」ショートカット表示を更新
+function renderLastMemoShortcut() {
+    const btn = document.getElementById('lastMemoShortcut');
+    const titleEl = document.getElementById('lastMemoShortcutTitle');
+    if (!btn || !titleEl) return;
+    let lastId = null;
+    try { lastId = localStorage.getItem('memoppa_lastMemoId'); } catch(e) {}
+    const lastMemo = lastId ? memos.find(m => m.id === lastId && !m.isTrashed) : null;
+    if (!lastMemo || lastMemo.id === currentMemoId) {
+        btn.classList.add('hidden');
+        return;
+    }
+    titleEl.textContent = lastMemo.title || '無題のメモ';
+    btn.classList.remove('hidden');
 }
 
 function extractTags(text) {
@@ -907,6 +929,12 @@ function setupEventListeners() {
     });
     
     if(newMemoBtn) newMemoBtn.addEventListener('click', () => { createNewMemo(); if(!isSidebarPinned) toggleSidebar(true); });
+    const lastMemoShortcutBtn = document.getElementById('lastMemoShortcut');
+    if(lastMemoShortcutBtn) lastMemoShortcutBtn.addEventListener('click', () => {
+        let lastId = null;
+        try { lastId = localStorage.getItem('memoppa_lastMemoId'); } catch(e) {}
+        if (lastId) selectMemo(lastId);
+    });
     if(mobileNewMemoFab) mobileNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(promptHubNewMemoFab) promptHubNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
@@ -1376,8 +1404,15 @@ function setupEventListeners() {
     if(profileSaveBtn) profileSaveBtn.addEventListener('click', async () => {
         if (!currentUser) return;
         const nameInput = document.getElementById('profileDisplayNameInput');
-        if (nameInput && nameInput.value.trim()) await updateUserDisplayName(currentUser.uid, nameInput.value);
-        showToast('プロフィールを保存しました', 'check_circle');
+        if (!nameInput || !nameInput.value.trim()) return;
+        profileSaveBtn.disabled = true;
+        const result = await updateUserDisplayName(currentUser.uid, nameInput.value);
+        profileSaveBtn.disabled = false;
+        if (result.ok) {
+            showToast('プロフィールを保存しました', 'check_circle');
+        } else if (result.reason === 'duplicate') {
+            showToast('その名前はすでに使われています。別の名前にしてください', 'error');
+        }
     });
     if(closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => { settingsModal.style.display = 'none'; saveAndApplySettings(); });
 
@@ -1641,6 +1676,7 @@ function selectMemo(id, openEditorInMobile = true) {
     }
     currentMemoId = id; const memo = memos.find(m => m.id === id);
     try { localStorage.setItem('memoppa_lastMemoId', id); } catch(e) {}
+    renderLastMemoShortcut();
     if (memo) {
         if(memoTitle) memoTitle.value = memo.title; if(memoContent) memoContent.innerHTML = memo.content; 
         if(memoUpdatedAt) memoUpdatedAt.textContent = memo.updatedAt ? `最終更新: ${formatDate(memo.updatedAt)}` : '';
@@ -2302,11 +2338,23 @@ async function getUserProfile(uid) {
         return { displayName: 'memoppaユーザー', profileCustomized: false };
     }
 }
+async function isDisplayNameTaken(name, excludeUid) {
+    try {
+        const q = query(collection(db, 'users'), where('displayName', '==', name), limit(2));
+        const snap = await getDocs(q);
+        return snap.docs.some(d => d.id !== excludeUid);
+    } catch (e) {
+        // 権限エラー等でチェックできない場合は、保存自体はブロックしない
+        return false;
+    }
+}
 async function updateUserDisplayName(uid, newName) {
     const trimmed = (newName || '').trim();
-    if (!trimmed) return;
+    if (!trimmed) return { ok: false, reason: 'empty' };
+    if (await isDisplayNameTaken(trimmed, uid)) return { ok: false, reason: 'duplicate' };
     await setDoc(doc(db, 'users', uid), { displayName: trimmed, profileCustomized: true }, { merge: true });
     profileCache.set(uid, { ...(profileCache.get(uid) || {}), displayName: trimmed, profileCustomized: true });
+    return { ok: true };
 }
 async function renderProfileSettings() {
     if (!currentUser) return;
@@ -2538,12 +2586,12 @@ async function openShareReviewModal(memo) {
                     個人情報らしき記述は見つかりませんでした
                 </div>
             `}
-            <div class="share-review-preview-label">タップして自由に編集できます</div>
-            <div class="share-review-live-text" id="shareReviewLiveText" contenteditable="true" spellcheck="false"></div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">share</span> 共有URLを発行</button>
             </div>
+            <div class="share-review-preview-label">タップして自由に編集できます</div>
+            <div class="share-review-live-text" id="shareReviewLiveText" contenteditable="true" spellcheck="false"></div>
         </div>`;
     document.body.appendChild(modal);
     setTimeout(() => modal.classList.add('show'), 10);
@@ -2684,7 +2732,10 @@ async function openShareReviewModal(memo) {
     modal.querySelector('.share-review-confirm').addEventListener('click', async () => {
         const nicknameInput = document.getElementById('shareReviewNickname');
         if (nicknameInput && currentUser) {
-            await updateUserDisplayName(currentUser.uid, nicknameInput.value);
+            const result = await updateUserDisplayName(currentUser.uid, nicknameInput.value);
+            if (!result.ok && result.reason === 'duplicate') {
+                showToast('その表示名はすでに使われています。設定から別の名前に変更できます', 'error');
+            }
         }
         const finalText = getFinalText();
         const url = await doSharePrompt(memo, finalText);
@@ -3128,7 +3179,7 @@ function renderPromptHub(query = '', activeTag = null) {
                     const refUid = parts.length >= 2 ? parts[0] : currentUser.uid;
                     const refDocId = parts.length >= 2 ? parts[1] : parts[0];
                     const snap = await getDoc(doc(db, 'users', refUid, 'sharedPrompts', refDocId));
-                    if (snap.exists()) {
+                    if (snap.exists() && document.body.contains(card)) {
                         const data = snap.data();
                         const likeNum = document.getElementById(`statLike_${m.id}`);
                         const copyNum = document.getElementById(`statCopy_${m.id}`);
