@@ -690,7 +690,10 @@ function initRealtimeMemos() {
         
         // オンボーディングは loadUserSettings の hasSeenOnboarding フラグで表示される
         if (!currentMemoId || !memos.some(m => m.id === currentMemoId)) {
-            const firstActive = memos.find(m => !m.isTrashed);
+            let lastId = null;
+            try { lastId = localStorage.getItem('memoppa_lastMemoId'); } catch(e) {}
+            const lastMemo = lastId ? memos.find(m => m.id === lastId && !m.isTrashed) : null;
+            const firstActive = lastMemo || memos.find(m => !m.isTrashed);
             if(firstActive) selectMemo(firstActive.id, false);
         } else {
             const current = memos.find(m => m.id === currentMemoId);
@@ -1637,6 +1640,7 @@ function selectMemo(id, openEditorInMobile = true) {
         }
     }
     currentMemoId = id; const memo = memos.find(m => m.id === id);
+    try { localStorage.setItem('memoppa_lastMemoId', id); } catch(e) {}
     if (memo) {
         if(memoTitle) memoTitle.value = memo.title; if(memoContent) memoContent.innerHTML = memo.content; 
         if(memoUpdatedAt) memoUpdatedAt.textContent = memo.updatedAt ? `最終更新: ${formatDate(memo.updatedAt)}` : '';
