@@ -160,7 +160,7 @@ function showShareToastWithX(url, title) {
         <button class="x-share-toast-close">&times;</button>
     `;
     document.body.appendChild(toast);
-    const tweetText = `「${title}」\n\nプロンプトをmemoppaで共有しました👇\n`;
+    const tweetText = `プロンプトのタイトル「${title}」をmemoppaで共有しました。\n#memoppa #プロンプト`;
     toast.querySelector('.x-share-toast-btn').addEventListener('click', () => {
         const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(url)}`;
         window.open(intent, '_blank', 'noopener');
@@ -2687,7 +2687,7 @@ async function openShareReviewModal(memo) {
         if (!url) return;
         const box = modal.querySelector('.share-review-box');
         const title = memo.title || 'プロンプト';
-        const encodedTitle = encodeURIComponent('プロンプトのタイトル「' + title + '」をmemoppaで共有しました。\n\n#memoppa #プロンプト');
+        const encodedTitle = encodeURIComponent('プロンプトのタイトル「' + title + '」をmemoppaで共有しました。\n#memoppa #プロンプト');
         const encodedUrl = encodeURIComponent(url);
         box.innerHTML = [
             '<div class="share-review-header">',
