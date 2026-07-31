@@ -575,19 +575,36 @@ if (detectInAppBrowser()) {
     });
 }
 
+const LOGIN_LOADING_MARK_SVG = `<svg viewBox="0 0 150 150"><path d="M28,116 C28,78 30,52 46,52 C62,52 64,78 64,116 C64,78 66,52 82,52 C96,52 98,72 98,90 C102,78 108,68 118,56" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><circle cx="46" cy="52" r="8" fill="#ffffff"/></svg>`;
+const LOGIN_LOADING_CAPTIONS = ['ログインしています…', 'プロンプトを準備しています…', 'もうすぐです…'];
+let loginLoadingInterval = null;
+function startLoginLoadingAnimation() {
+    let i = 0;
+    googleLoginBtn.innerHTML = `<span class="login-loading-content"><span class="login-loading-mark">${LOGIN_LOADING_MARK_SVG}</span><span class="login-loading-caption" id="loginLoadingCaption">${LOGIN_LOADING_CAPTIONS[0]}</span></span>`;
+    loginLoadingInterval = setInterval(() => {
+        i = (i + 1) % LOGIN_LOADING_CAPTIONS.length;
+        const captionEl = document.getElementById('loginLoadingCaption');
+        if (captionEl) captionEl.textContent = LOGIN_LOADING_CAPTIONS[i];
+    }, 1800);
+}
+function stopLoginLoadingAnimation(originalText) {
+    if (loginLoadingInterval) { clearInterval(loginLoadingInterval); loginLoadingInterval = null; }
+    googleLoginBtn.innerHTML = originalText;
+}
+
 googleLoginBtn?.addEventListener('click', async () => {
-    const originalText = googleLoginBtn.innerHTML; googleLoginBtn.innerHTML = "🔄 Logging in...";
+    const originalText = googleLoginBtn.innerHTML; startLoginLoadingAnimation();
     if (isExtensionEnv()) {
         // Chrome拡張: launchWebAuthFlow方式（MV3ではsignInWithPopupが通らないため）
         if (GOOGLE_OAUTH_CLIENT_ID.includes('XXXX')) {
             alert('拡張機能でのログインには、OAuthクライアントIDの設定が必要です。\nGoogle Cloud Console → APIとサービス → 認証情報 のWebクライアントIDをコードに設定してください。');
-            googleLoginBtn.innerHTML = originalText; return;
+            stopLoginLoadingAnimation(originalText); return;
         }
         try { await signInWithChromeIdentity(); }
         catch (error) {
             console.error('[memoppa] identity sign-in error:', error.message);
             alert(`ログインに失敗しました (${error.message})`);
-            googleLoginBtn.innerHTML = originalText;
+            stopLoginLoadingAnimation(originalText);
         }
         return;
     }
@@ -604,7 +621,7 @@ googleLoginBtn?.addEventListener('click', async () => {
         } else {
             alert(`ログインに失敗しました (${error.code})`);
         }
-        googleLoginBtn.innerHTML = originalText;
+        stopLoginLoadingAnimation(originalText);
     }
 });
 

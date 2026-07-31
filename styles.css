@@ -78,6 +78,12 @@ body {
 .login-subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 40px; line-height: 1.5; }
 .google-login-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 16px; background: var(--bg-sidebar); border: 1px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow); }
 .google-login-btn:hover { background: var(--bg-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15);}
+@keyframes loginMarkBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes loginCaptionFade { 0%, 78% { opacity: 1; transform: translateY(0); } 88%, 100% { opacity: 0; transform: translateY(-4px); } }
+.login-loading-content { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.login-loading-mark { width: 26px; height: 26px; border-radius: 8px; background: #0F6E56; display: flex; align-items: center; justify-content: center; flex-shrink: 0; animation: loginMarkBounce 0.8s ease-in-out infinite; }
+.login-loading-mark svg { width: 15px; height: 15px; }
+.login-loading-caption { font-size: 14px; font-weight: 600; color: var(--text-primary); animation: loginCaptionFade 1.8s ease-in-out infinite; }
 .google-icon { width: 20px; height: 20px; }
 
 /* 3. アプリ全体・サイドバー */
