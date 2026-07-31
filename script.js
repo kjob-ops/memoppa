@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment, query, where, getDocs, limit } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment, query, where, getDocs, limit } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAj5Y7PLvRLRRl8Ay1JMUWjJsbgCAqygG0",
@@ -13,7 +13,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+// オフラインキャッシュを有効化：2回目以降の起動時、ネットワーク応答を待たずに
+// 前回同期済みのデータをまず表示し、裏で最新データに更新する（体感速度の改善）
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 const provider = new GoogleAuthProvider();
 const GAS_URL = "https://script.google.com/macros/s/AKfycbz1CeAOVkrXfkAueQGWN-MxoReujyCJ7YOlk1Ssr0uyt5X4BWiHgP01COD4fgyrm6JN/exec";
 
@@ -2382,7 +2386,17 @@ async function renderProfileSettings() {
     if (nameInput) nameInput.value = profile.displayName;
 }
 
-async function cloudSaveMemo(memo) { if (!currentUser) return; await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo); }
+async function cloudSaveMemo(memo) {
+    if (!currentUser) return;
+    try {
+        await setDoc(doc(db, "users", currentUser.uid, "memos", memo.id), memo);
+    } catch (e) {
+        // オフライン時はローカルキャッシュに書き込まれた時点でこのPromiseは解決されるため、
+        // ここに来るのは権限エラーなど「本当に保存できなかった」ケースのみ。
+        console.error('[memoppa] cloudSaveMemo failed:', e.code, e.message);
+        showToast('保存に失敗しました。もう一度お試しください', 'error');
+    }
+}
 
 // プロンプト共有URL生成
 async function showSharePreview(shareId, isLoggedIn = false) {
@@ -2939,7 +2953,15 @@ async function importSharedPrompt(shareId) {
         showToast('インポートに失敗しました', 'error');
     }
 }
-async function cloudDeleteMemo(memoId) { if (!currentUser) return; await deleteDoc(doc(db, "users", currentUser.uid, "memos", memoId)); }
+async function cloudDeleteMemo(memoId) {
+    if (!currentUser) return;
+    try {
+        await deleteDoc(doc(db, "users", currentUser.uid, "memos", memoId));
+    } catch (e) {
+        console.error('[memoppa] cloudDeleteMemo failed:', e.code, e.message);
+        showToast('完全削除に失敗しました。もう一度お試しください', 'error');
+    }
+}
 
 let onboardingChecked = false;
 
@@ -2970,7 +2992,7 @@ function loadUserSettings() {
         }
     });
 }
-function saveUserSettings(updates) { if (currentUser) setDoc(doc(db, "users", currentUser.uid, "settings", "preferences"), updates, { merge: true }); }
+function saveUserSettings(updates) { if (currentUser) setDoc(doc(db, "users", currentUser.uid, "settings", "preferences"), updates, { merge: true }).catch(e => console.error('[memoppa] saveUserSettings failed:', e.code, e.message)); }
 function updateFontPreview() {
     const activeTab = document.querySelector('.font-device-tab.active')?.dataset.device || 'pc';
     const fam = activeTab === 'mobile' ? fontFamilyMobile : fontFamilyPc;
