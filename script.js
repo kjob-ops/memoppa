@@ -1036,6 +1036,8 @@ function setupEventListeners() {
     const rarityInfoCloseBtn = document.getElementById('rarityInfoCloseBtn');
     if (rarityInfoCloseBtn) rarityInfoCloseBtn.addEventListener('click', () => rarityInfoModal?.classList.add('hidden'));
     rarityInfoModal?.querySelector('.rarity-info-backdrop')?.addEventListener('click', () => rarityInfoModal.classList.add('hidden'));
+    const promptHubGrowthInfoBtn = document.getElementById('promptHubGrowthInfoBtn');
+    if (promptHubGrowthInfoBtn) promptHubGrowthInfoBtn.addEventListener('click', () => showRarityInfo(null));
 
     if(mobileMenuBtn && mobileActionMenu) {
         mobileMenuBtn.addEventListener('click', (e) => {
@@ -3041,10 +3043,7 @@ async function stopSharingPrompt(memo) {
     memo.sharedRef = null;
 }
 
-function renderPromptHub(query = '', activeTag = null) {
-    const list = document.getElementById('promptHubList');
-    if(!list) return;
-    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate)
+    const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate && ((m.title||'').trim() || (m.content||'').trim()))
     if(prompts.length === 0) {
         list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
         return;
@@ -3061,7 +3060,7 @@ function renderPromptHub(query = '', activeTag = null) {
         card.innerHTML = `
             ${m.sharedRef ? '<div class="shared-ribbon phc-ribbon">共有中</div>' : ''}
             <div class="phc-card-head" data-id="${m.id}">
-                <span id="rarityBadge_${m.id}"><span class="phc-rarity-hint" title="プロンプトが育つ仕組み">？</span></span>
+                <span id="rarityBadge_${m.id}"></span>
             </div>
             <div class="phc-left" data-id="${m.id}">
                 <div class="phc-title ${m.sharedRef ? 'phc-title-shared' : ''}">${escapeHtml(m.title||'無題')}</div>
@@ -3209,7 +3208,7 @@ function renderPromptHub(query = '', activeTag = null) {
                         card.classList.add(rarity.class);
                         card.dataset.growthScore = calcGrowthScore(data);
                         const badgeEl = document.getElementById(`rarityBadge_${m.id}`);
-                        if (badgeEl) badgeEl.innerHTML = rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : '<span class="phc-rarity-hint" title="プロンプトが育つ仕組み">？</span>';
+                        if (badgeEl) badgeEl.innerHTML = rarity.label ? `<span class="phc-rarity-badge ${rarity.class}-badge">${rarity.label}</span>` : '';
                     }
                 } catch(e) {}
             })();

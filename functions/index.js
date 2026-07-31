@@ -37,10 +37,12 @@ async function fetchPromptData(shareId) {
     const title = fields.title?.stringValue || 'プロンプト';
     const rawContent = fields.content?.stringValue || '';
     const content = rawContent.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-    const preview = content.slice(0, 100) + (content.length > 100 ? '…' : '');
+    const preview = content.slice(0, 150);
+    const truncated = content.length > 150;
     const fullLen = content.length;
+    const sharedBy = fields.sharedBy?.stringValue || '';
 
-    return { title, preview, fullLen };
+    return { title, preview, truncated, fullLen, sharedBy };
   } catch (e) {
     return null;
   }
@@ -50,10 +52,10 @@ async function handleSharePage(context, shareId, url) {
   const data = await fetchPromptData(shareId);
   if (!data) return context.next();
 
-  const { title, preview, fullLen } = data;
+  const { title, preview, truncated, fullLen, sharedBy } = data;
   const ogTitle = title;
   const ogDesc = preview || 'プロンプトシェア専用メモ帳 memoppa';
-  const ogImage = `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}&len=${fullLen || ''}`;
+  const ogImage = `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}&len=${fullLen || ''}&trunc=${truncated ? '1' : '0'}&by=${encodeURIComponent(sharedBy)}`;
 
   const indexRes = await context.next();
   const html = await indexRes.text();
