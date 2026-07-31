@@ -2407,6 +2407,35 @@ async function showSharePreview(shareId, isLoggedIn = false) {
 
         const data = snap.data();
 
+        if (data.password) {
+            await new Promise((resolve) => {
+                const gate = document.createElement('div');
+                gate.className = 'sp-password-gate';
+                gate.innerHTML = `
+                    <div class="sp-password-gate-box">
+                        <span class="material-symbols-rounded sp-password-gate-icon">lock</span>
+                        <p class="sp-password-gate-title">合言葉が必要です</p>
+                        <p class="sp-password-gate-desc">この共有には合言葉が設定されています。共有した人から聞いた合言葉を入力してください。</p>
+                        <input type="text" id="spPasswordInput" class="sp-password-gate-input" placeholder="合言葉を入力" autocomplete="off">
+                        <button id="spPasswordSubmit" class="sp-password-gate-submit">開く</button>
+                        <p id="spPasswordError" class="sp-password-gate-error hidden">合言葉が違います</p>
+                    </div>`;
+                previewScreen.appendChild(gate);
+                const input = gate.querySelector('#spPasswordInput');
+                const submit = () => {
+                    if ((input.value || '').trim() === data.password) {
+                        gate.remove();
+                        resolve();
+                    } else {
+                        gate.querySelector('#spPasswordError').classList.remove('hidden');
+                    }
+                };
+                gate.querySelector('#spPasswordSubmit').addEventListener('click', submit);
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+                setTimeout(() => input.focus(), 50);
+            });
+        }
+
         // リアルタイムカウンター購読
         const unsubPreview = onSnapshot(ref, (s) => {
             if(!s.exists()) return;
@@ -2605,6 +2634,13 @@ async function openShareReviewModal(memo) {
                     個人情報らしき記述は見つかりませんでした
                 </div>
             `}
+            <div class="share-review-password">
+                <label class="share-review-password-toggle">
+                    <input type="checkbox" id="shareReviewPasswordToggle">
+                    🔒 合言葉を設定する（知っている人だけ閲覧できます）
+                </label>
+                <input type="text" id="shareReviewPasswordInput" class="hidden" placeholder="合言葉を入力" maxlength="30">
+            </div>
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">share</span> 共有URLを発行</button>
@@ -2616,6 +2652,12 @@ async function openShareReviewModal(memo) {
     setTimeout(() => modal.classList.add('show'), 10);
 
     const liveTextEl = modal.querySelector('#shareReviewLiveText');
+    const pwToggle = modal.querySelector('#shareReviewPasswordToggle');
+    const pwInput = modal.querySelector('#shareReviewPasswordInput');
+    if (pwToggle) pwToggle.addEventListener('change', () => {
+        pwInput.classList.toggle('hidden', !pwToggle.checked);
+        if (pwToggle.checked) pwInput.focus();
+    });
 
     // テキストを「自動変換済み」「タップ可能」「地の文」のセグメントに分解して描画
     function buildSegments() {
@@ -2757,7 +2799,8 @@ async function openShareReviewModal(memo) {
             }
         }
         const finalText = getFinalText();
-        const url = await doSharePrompt(memo, finalText);
+        const password = (pwToggle && pwToggle.checked) ? (pwInput.value || '').trim() : '';
+        const url = await doSharePrompt(memo, finalText, password);
         if (!url) return;
         const box = modal.querySelector('.share-review-box');
         const title = memo.title || 'プロンプト';
@@ -2821,7 +2864,7 @@ async function sharePrompt(memo) {
     await openShareReviewModal(memo);
 }
 
-async function doSharePrompt(memo, overrideContent) {
+async function doSharePrompt(memo, overrideContent, password) {
     try {
         if(!currentUser) { showToast('ログインが必要です', 'error'); return; }
         const authorProfile = await getUserProfile(currentUser.uid);
@@ -2835,6 +2878,7 @@ async function doSharePrompt(memo, overrideContent) {
             useCount: 0,
             previewCopyCount: 0,
             likeCount: 0,
+            password: password || null,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
         const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);

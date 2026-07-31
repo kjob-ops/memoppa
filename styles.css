@@ -901,6 +901,20 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .finding-var { color: var(--accent-color); font-weight: 600; font-family: monospace; flex-shrink: 0; }
 .share-review-preview-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .share-review-preview { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; font-size: 12.5px; color: #374151; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular','Consolas',monospace; white-space: pre-wrap; word-break: break-word; }
+.share-review-password { flex-shrink: 0; margin-bottom: 14px; }
+.share-review-password-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+.share-review-password-toggle input[type="checkbox"] { width: 16px; height: 16px; }
+.share-review-password #shareReviewPasswordInput { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; font-family: inherit; }
+
+.sp-password-gate { position: fixed; inset: 0; background: rgba(15,110,86,0.96); display: flex; align-items: center; justify-content: center; z-index: 500; padding: 24px; }
+.sp-password-gate-box { background: #fff; border-radius: 16px; padding: 32px 28px; max-width: 340px; width: 100%; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.sp-password-gate-icon { font-size: 32px; color: #0F6E56; margin-bottom: 8px; }
+.sp-password-gate-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0; }
+.sp-password-gate-desc { font-size: 12.5px; color: var(--text-secondary); margin: 4px 0 14px; line-height: 1.6; }
+.sp-password-gate-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 14px; font-family: inherit; text-align: center; margin-bottom: 10px; }
+.sp-password-gate-submit { width: 100%; padding: 12px; background: #0F6E56; color: #fff; border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.sp-password-gate-error { color: #b91c1c; font-size: 12px; margin-top: 8px; }
+
 .share-review-actions { display: flex; gap: 10px; flex-shrink: 0; margin-bottom: 18px; }
 .share-review-cancel { flex: 1; padding: 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-hover); color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
 .share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-color); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }

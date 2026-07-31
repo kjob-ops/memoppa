@@ -68,7 +68,8 @@ async function handleSharePage(context, shareId, url) {
     .replace(/(<meta\s+property="og:image"\s+content=")[^"]*(")/,   `$1${esc(ogImage)}$2`)
     .replace(/(<meta\s+name="twitter:title"\s+content=")[^"]*(")/,  `$1${esc(ogTitle)}$2`)
     .replace(/(<meta\s+name="twitter:description"\s+content=")[^"]*(")/,`$1${esc(ogDesc)}$2`)
-    .replace(/(<meta\s+name="twitter:image"\s+content=")[^"]*(")/,  `$1${esc(ogImage)}$2`);
+    .replace(/(<meta\s+name="twitter:image"\s+content=")[^"]*(")/,  `$1${esc(ogImage)}$2`)
+    .replace(/(<meta\s+name="twitter:image:alt"\s+content=")[^"]*(")/, `$1memoppa$2`);
 
   return new Response(patched, {
     headers: {
