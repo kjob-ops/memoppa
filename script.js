@@ -689,7 +689,7 @@ if(switchAccountBtn) switchAccountBtn.addEventListener('click', async () => {
 // DB読み込み
 // ==========================================
 let unsubscribeMemos = null;
-let hasInitializedMemoSelection = false; // ログイン直後は常に未選択（トップ画面）から開始するためのフラグ
+let userHasSelectedMemo = false; // trueになるのはselectMemo()が呼ばれた時だけ（トップ画面固定のガード）
 // ゴミ箱のメモは10日経過で自動削除（サーバー不要・クライアント側チェック）
 const TRASH_RETENTION_DAYS = 10;
 function purgeExpiredTrash() {
@@ -704,7 +704,7 @@ function purgeExpiredTrash() {
 
 function initRealtimeMemos() {
     if (unsubscribeMemos) unsubscribeMemos();
-    hasInitializedMemoSelection = false; // 新しいログインセッションのたびにリセット
+    userHasSelectedMemo = false; // 新しいログインセッションのたびにリセット
     const memosRef = collection(db, "users", currentUser.uid, "memos");
     unsubscribeMemos = onSnapshot(memosRef, (snapshot) => {
         memos = [];
@@ -712,10 +712,10 @@ function initRealtimeMemos() {
         purgeExpiredTrash();
         
         // オンボーディングは loadUserSettings の hasSeenOnboarding フラグで表示される
-        if (!hasInitializedMemoSelection) {
-            // ログイン直後の最初の1回だけは、何も選択しないトップ画面から開始する
+        if (!userHasSelectedMemo) {
+            // ユーザーがまだ何も選んでいない間は、オフラインキャッシュ→サーバーの2段階応答で
+            // onSnapshotが複数回呼ばれても、常にトップ画面（未選択）のままにする
             // （「前回開いていたメモ」はサイドバーのショートカットからワンタップで開ける）
-            hasInitializedMemoSelection = true;
         } else if (!currentMemoId || !memos.some(m => m.id === currentMemoId)) {
             let lastId = null;
             try { lastId = localStorage.getItem('memoppa_lastMemoId'); } catch(e) {}
@@ -1057,11 +1057,7 @@ function setupEventListeners() {
                 }
                 if(actionPrivateBtn) {
                     const privLabel = document.getElementById('actionPrivateLabel');
-                    if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
-                }
-                if(actionPrivateBtn) {
-                    const privLabel = document.getElementById('actionPrivateLabel');
-                    if(privLabel) privLabel.textContent = current.isPrivate ? '非公開を解除' : '非公開にする';
+                    if(privLabel) privLabel.textContent = current.isPrivate ? '非表示を解除' : '非表示にする';
                 }
                 if(actionDeleteBtn) actionDeleteBtn.innerHTML = current.isTrashed
                     ? `<span class="material-symbols-rounded">restore_from_trash</span> 元に戻す`
@@ -1681,6 +1677,7 @@ function createWelcomeMemo(selectedAis = []) {
 }
 
 function selectMemo(id, openEditorInMobile = true) {
+    userHasSelectedMemo = true;
     exitSearchMode();
     document.getElementById('memoMoreMenu')?.classList.add('hidden');
     if(mobileActionMenu) { mobileActionMenu.style.display = 'none'; mobileActionMenu.classList.add('hidden'); }
@@ -1737,10 +1734,10 @@ function updateMainActionButtons(memo) {
         mainPinBtn.title = memo.isPinned ? 'ピンを外す' : 'ピン留め';
         mainPinBtn.querySelector('.material-symbols-rounded').textContent = 'push_pin';
     }
-    // 非公開（常時表示・色で状態を示す）
+    // 非表示（プロンプトハブに載せるかどうか。常時表示・色で状態を示す）
     if(mainPrivateBtn) {
         mainPrivateBtn.classList.toggle('active', !!memo.isPrivate);
-        mainPrivateBtn.title = memo.isPrivate ? '非公開を解除' : '非公開にする';
+        mainPrivateBtn.title = memo.isPrivate ? '非表示を解除' : '非表示にする';
         mainPrivateBtn.querySelector('.material-symbols-rounded').textContent = memo.isPrivate ? 'visibility' : 'visibility_off';
     }
     // プロンプト
@@ -3199,7 +3196,7 @@ async function stopSharingPrompt(memo) {
             menu.className = 'phc-more-menu';
             menu.innerHTML = `
                 <button data-act="pin">${m.isPinned ? '<span class="material-symbols-rounded">keep_off</span> ピン留め解除' : '<span class="material-symbols-rounded">keep</span> ピン留め'}</button>
-                <button data-act="private">${m.isPrivate ? '<span class="material-symbols-rounded">lock_open</span> 公開に戻す' : '<span class="material-symbols-rounded">lock</span> 非公開にする'}</button>
+                <button data-act="private">${m.isPrivate ? '<span class="material-symbols-rounded">visibility</span> 表示に戻す' : '<span class="material-symbols-rounded">visibility_off</span> 非表示にする'}</button>
                 <button data-act="memolist"><span class="material-symbols-rounded">list</span> メモ一覧で開く</button>
                 <button data-act="delete" class="phc-menu-danger"><span class="material-symbols-rounded">delete</span> 削除</button>
             `;
@@ -3554,8 +3551,26 @@ function renderMemoList() {
 
         const dragHandle = item.querySelector('.drag-handle');
         if (!memo.isTrashed && dragHandle) {
-            dragHandle.addEventListener('touchstart', (e) => { if(e.cancelable) e.preventDefault(); draggedItem = item; item.classList.add('sortable-ghost'); }, {passive: false});
+            let dragPressTimer = null, dragArmed = false, dragTouchStartX = 0, dragTouchStartY = 0;
+            dragHandle.addEventListener('touchstart', (e) => {
+                dragArmed = false;
+                const t = e.touches[0];
+                dragTouchStartX = t.clientX; dragTouchStartY = t.clientY;
+                dragPressTimer = setTimeout(() => {
+                    dragArmed = true;
+                    draggedItem = item;
+                    item.classList.add('sortable-ghost');
+                    if (navigator.vibrate) navigator.vibrate(10);
+                }, 350);
+            }, {passive: true});
             dragHandle.addEventListener('touchmove', (e) => {
+                if (!dragArmed) {
+                    const t = e.touches[0];
+                    if (Math.abs(t.clientX - dragTouchStartX) > 10 || Math.abs(t.clientY - dragTouchStartY) > 10) {
+                        clearTimeout(dragPressTimer);
+                    }
+                    return;
+                }
                 if(e.cancelable) e.preventDefault();
                 const touch = e.touches[0];
                 const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -3570,6 +3585,9 @@ function renderMemoList() {
             }, {passive: false});
 
             dragHandle.addEventListener('touchend', (e) => {
+                clearTimeout(dragPressTimer);
+                if (!dragArmed) return; // 長押しに達する前に指を離した＝並び替えなしのタップ扱い
+                dragArmed = false;
                 item.classList.remove('sortable-ghost');
                 const touch = e.changedTouches[0];
                 const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
