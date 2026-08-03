@@ -1042,6 +1042,10 @@ function setupEventListeners() {
     rarityInfoModal?.querySelector('.rarity-info-backdrop')?.addEventListener('click', () => rarityInfoModal.classList.add('hidden'));
     const promptHubGrowthInfoBtn = document.getElementById('promptHubGrowthInfoBtn');
     if (promptHubGrowthInfoBtn) promptHubGrowthInfoBtn.addEventListener('click', () => showRarityInfo(null));
+    // 上のnullチェック用に加え、委譲でも拾う（ノードが後から差し替わっても動くように）
+    document.getElementById('promptHubTagAccordion')?.addEventListener('click', (e) => {
+        if (e.target.closest('#promptHubGrowthInfoBtn')) showRarityInfo(null);
+    });
 
     if(mobileMenuBtn && mobileActionMenu) {
         mobileMenuBtn.addEventListener('click', (e) => {
@@ -3121,7 +3125,7 @@ async function stopSharingPrompt(memo) {
         const card = document.createElement('div');
         card.className = `prompt-hub-card ${rarity.class} ${m.sharedRef ? 'is-shared' : ''}`;
         card.innerHTML = `
-            ${m.sharedRef ? '<div class="shared-ribbon phc-ribbon">共有中</div>' : ''}
+            ${m.sharedRef ? '<div class="phc-ribbon-clip"><div class="shared-ribbon phc-ribbon">共有中</div></div>' : ''}
             <div class="phc-card-head" data-id="${m.id}">
                 <span id="rarityBadge_${m.id}"></span>
             </div>
@@ -3434,7 +3438,7 @@ function renderMemoList() {
         }
 
         item.innerHTML = `
-            ${memo.sharedRef ? '<div class="shared-ribbon">共有中</div>' : ''}
+            ${memo.sharedRef ? '<div class="ribbon-clip"><div class="shared-ribbon">共有中</div></div>' : ''}
             <div class="item-meta-col">
                 <div class="checkbox-wrapper">
                     <input type="checkbox" class="custom-checkbox list-checkbox" data-id="${memo.id}" ${isSelected ? 'checked' : ''}>
@@ -3609,8 +3613,10 @@ function renderMemoList() {
             const enableDrag = () => item.setAttribute('draggable', true);
             const disableDrag = () => item.setAttribute('draggable', false);
             dragHandle.addEventListener('mousedown', enableDrag);
-            dragHandle.addEventListener('mouseup', disableDrag);
-            dragHandle.addEventListener('mouseleave', disableDrag);
+            // 注意: mouseleaveでdisableDragすると、ハンドルからカーソルが離れた瞬間
+            // （＝ドラッグを始めた直後）にdraggable属性が消えてしまい、PCでの並び替えが
+            // 一切発動しないバグになるため付けない。後始末はdragend/documentのmouseupに任せる。
+            document.addEventListener('mouseup', disableDrag);
 
             item.addEventListener('dragstart', function(e) { draggedItem = this; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', memo.id); setTimeout(() => this.classList.add('sortable-ghost'), 0); });
             item.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const bounding = this.getBoundingClientRect(); if (e.clientY - (bounding.y + bounding.height / 2) > 0) { this.style.borderBottom = '2px solid var(--accent-color)'; this.style.borderTop = ''; } else { this.style.borderTop = '2px solid var(--accent-color)'; this.style.borderBottom = ''; } });
