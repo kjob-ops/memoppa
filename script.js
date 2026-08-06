@@ -27,6 +27,8 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbz1CeAOVkrXfkAueQGWN-Mx
 let memos = [];
 let currentUser = null;
 let currentMemoId = null;
+let draggedItem = null; // PC/モバイル共通：現在ドラッグ中の.memo-item要素
+document.addEventListener('mouseup', () => { if (draggedItem) draggedItem.setAttribute('draggable', false); });
 let currentFilter = 'all'; 
 const expandedTagsIds = new Set();
 let currentSortIndex = 0; 
@@ -3613,13 +3615,12 @@ function renderMemoList() {
                 }
             });
 
-            const enableDrag = () => item.setAttribute('draggable', true);
+            const enableDrag = () => { draggedItem = item; item.setAttribute('draggable', true); };
             const disableDrag = () => item.setAttribute('draggable', false);
             dragHandle.addEventListener('mousedown', enableDrag);
             // 注意: mouseleaveでdisableDragすると、ハンドルからカーソルが離れた瞬間
             // （＝ドラッグを始めた直後）にdraggable属性が消えてしまい、PCでの並び替えが
-            // 一切発動しないバグになるため付けない。後始末はdragend/documentのmouseupに任せる。
-            document.addEventListener('mouseup', disableDrag);
+            // 一切発動しないバグになるため付けない。後始末はdragend/document側の共通mouseupに任せる。
 
             item.addEventListener('dragstart', function(e) { draggedItem = this; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', memo.id); setTimeout(() => this.classList.add('sortable-ghost'), 0); });
             item.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; const bounding = this.getBoundingClientRect(); if (e.clientY - (bounding.y + bounding.height / 2) > 0) { this.style.borderBottom = '2px solid var(--accent-color)'; this.style.borderTop = ''; } else { this.style.borderTop = '2px solid var(--accent-color)'; this.style.borderBottom = ''; } });
