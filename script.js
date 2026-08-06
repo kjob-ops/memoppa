@@ -3130,7 +3130,7 @@ function renderPromptHub(query = '', activeTag = null) {
         const card = document.createElement('div');
         card.className = `prompt-hub-card ${rarity.class} ${m.sharedRef ? 'is-shared' : ''}`;
         card.innerHTML = `
-            ${m.sharedRef ? '<div class="phc-ribbon-clip"><div class="shared-ribbon phc-ribbon">共有中</div></div>' : ''}
+            ${m.sharedRef ? '<div class="phc-shared-corner"></div><div class="phc-shared-corner-label">共有</div>' : ''}
             <div class="phc-card-head" data-id="${m.id}">
                 <span id="rarityBadge_${m.id}"></span>
             </div>
@@ -3443,7 +3443,7 @@ function renderMemoList() {
         }
 
         item.innerHTML = `
-            ${memo.sharedRef ? '<div class="ribbon-clip"><div class="shared-ribbon">共有中</div></div>' : ''}
+            ${memo.sharedRef ? '<div class="shared-corner"></div><div class="shared-corner-label">共有</div>' : ''}
             <div class="item-meta-col">
                 <div class="checkbox-wrapper">
                     <input type="checkbox" class="custom-checkbox list-checkbox" data-id="${memo.id}" ${isSelected ? 'checked' : ''}>
