@@ -3110,6 +3110,9 @@ async function stopSharingPrompt(memo) {
     memo.sharedRef = null;
 }
 
+function renderPromptHub(query = '', activeTag = null) {
+    const list = document.getElementById('promptHubList');
+    if(!list) return;
     const prompts = memos.filter(m => m.isPrompt && !m.isTrashed && !m.isPrivate && ((m.title||'').trim() || (m.content||'').trim()))
     if(prompts.length === 0) {
         list.innerHTML = `<div class="prompt-hub-empty"><span class="material-symbols-rounded">bolt</span><p>${query ? '該当するプロンプトがありません' : 'プロンプトがまだありません。メモを開いて⚡ボタンで登録できます。'}</p></div>`;
