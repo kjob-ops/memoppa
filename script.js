@@ -3017,6 +3017,9 @@ function saveAndApplySettings() {
 }
 function applySettings() {
     document.body.setAttribute('data-theme', currentTheme);
+    document.querySelectorAll('.logo-img-large').forEach(img => {
+        img.src = currentTheme === 'dark' ? 'memoppa_logo_v7_clean_dark.svg' : 'memoppa_logo_v7_clean.svg';
+    });
     const fontMap = {
         'system':    "-apple-system, BlinkMacSystemFont, '游ゴシック体', 'Yu Gothic', 'Segoe UI', sans-serif",
         'noto-sans': "'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif",

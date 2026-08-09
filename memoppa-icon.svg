@@ -1,5 +1,19 @@
 <svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" class="memoppa-mark" aria-hidden="true">
-  <rect x="0" y="0" width="150" height="150" rx="34" fill="#0F6E56"/>
+  <defs>
+    <linearGradient id="memoppaAurora" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a4a3a"/>
+      <stop offset="35%" stop-color="#0F6E56"/>
+      <stop offset="65%" stop-color="#1a8f7a"/>
+      <stop offset="85%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0e5a8a"/>
+    </linearGradient>
+    <radialGradient id="memoppaGloss" cx="30%" cy="20%" r="70%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
+      <stop offset="60%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  <rect x="0" y="0" width="150" height="150" rx="34" fill="url(#memoppaAurora)"/>
+  <rect x="0" y="0" width="150" height="150" rx="34" fill="url(#memoppaGloss)"/>
   <path d="M28,116 C28,78 30,52 46,52 C62,52 64,78 64,116 C64,78 66,52 82,52 C96,52 98,72 98,90 C102,78 108,68 118,56"
         fill="none" stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="46" cy="52" r="6" fill="#ffffff"/>
