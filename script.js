@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment, query, where, getDocs, limit } from "firebase/firestore";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAj5Y7PLvRLRRl8Ay1JMUWjJsbgCAqygG0",
@@ -18,6 +19,10 @@ const auth = getAuth(app);
 const db = initializeFirestore(app, {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
 });
+const storage = getStorage(app);
+// 実験中の機能: シェア画像添付。うまくいかなければこのフラグをfalseにするだけで
+// ボタン・アップロード・OGP反映のすべてが無効化され、簡単に元に戻せる。
+const IMAGE_SHARE_ENABLED = true;
 const provider = new GoogleAuthProvider();
 const GAS_URL = "https://script.google.com/macros/s/AKfycbz1CeAOVkrXfkAueQGWN-MxoReujyCJ7YOlk1Ssr0uyt5X4BWiHgP01COD4fgyrm6JN/exec";
 
@@ -1017,6 +1022,19 @@ function setupEventListeners() {
         closePromptVarModal();
     });
     if(mainPrivateBtn) mainPrivateBtn.addEventListener('click', () => togglePrivate());
+    const mainImageBtn = document.getElementById('mainImageBtn');
+    const actionImageBtn2 = document.getElementById('actionImageBtn2');
+    const shareImageFileInput = document.getElementById('shareImageFileInput');
+    const shareImageRemoveBtn = document.getElementById('shareImageRemoveBtn');
+    const openShareImagePicker = () => { if (shareImageFileInput) shareImageFileInput.click(); };
+    if(mainImageBtn) mainImageBtn.addEventListener('click', openShareImagePicker);
+    if(actionImageBtn2) actionImageBtn2.addEventListener('click', () => { openShareImagePicker(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
+    if(shareImageFileInput) shareImageFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) handleShareImageSelected(file);
+        e.target.value = '';
+    });
+    if(shareImageRemoveBtn) shareImageRemoveBtn.addEventListener('click', () => handleShareImageRemove());
     if(mainDeleteBtn) mainDeleteBtn.addEventListener('click', () => directDelete(currentMemoId));
 
     if(cancelMultiSelectBtn) cancelMultiSelectBtn.addEventListener('click', exitMultiSelect);
@@ -1703,6 +1721,7 @@ function selectMemo(id, openEditorInMobile = true) {
     currentMemoId = id; const memo = memos.find(m => m.id === id);
     try { localStorage.setItem('memoppa_lastMemoId', id); } catch(e) {}
     renderLastMemoShortcut();
+    updateShareImageUI(memo);
     if (memo) {
         if(memoTitle) memoTitle.value = memo.title; if(memoContent) memoContent.innerHTML = memo.content; 
         if(memoUpdatedAt) memoUpdatedAt.textContent = memo.updatedAt ? `最終更新: ${formatDate(memo.updatedAt)}` : '';
@@ -2389,6 +2408,72 @@ async function renderProfileSettings() {
     if (nameInput) nameInput.value = profile.displayName;
 }
 
+// ---- シェア画像添付（実験中機能） ----
+function updateShareImageUI(memo) {
+    const btnPc = document.getElementById('mainImageBtn');
+    const btnMobile = document.getElementById('actionImageBtn2');
+    if (!IMAGE_SHARE_ENABLED) {
+        if (btnPc) btnPc.classList.add('hidden');
+        if (btnMobile) btnMobile.classList.add('hidden');
+        const wrap = document.getElementById('shareImagePreviewWrap');
+        if (wrap) wrap.classList.add('hidden');
+        return;
+    }
+    if (btnPc) btnPc.classList.remove('hidden');
+    if (btnMobile) btnMobile.classList.remove('hidden');
+    const wrap = document.getElementById('shareImagePreviewWrap');
+    const img = document.getElementById('shareImagePreviewImg');
+    if (!wrap || !img) return;
+    if (memo && memo.shareImageUrl) {
+        img.src = memo.shareImageUrl;
+        wrap.classList.remove('hidden');
+    } else {
+        wrap.classList.add('hidden');
+        img.src = '';
+    }
+}
+
+async function handleShareImageSelected(file) {
+    if (!currentUser || !currentMemoId) return;
+    if (!file.type.startsWith('image/')) { showToast('画像ファイルを選んでください', 'error'); return; }
+    const MAX_BYTES = 5 * 1024 * 1024; // 5MB
+    if (file.size > MAX_BYTES) { showToast('画像は5MBまでです', 'error'); return; }
+    showToast('画像をアップロード中…', 'sync');
+    try {
+        const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+        const path = `users/${currentUser.uid}/memos/${currentMemoId}/share-image.${ext}`;
+        const fileRef = storageRef(storage, path);
+        await uploadBytes(fileRef, file, { contentType: file.type });
+        const url = await getDownloadURL(fileRef);
+        const memo = memos.find(m => m.id === currentMemoId);
+        if (memo) {
+            memo.shareImageUrl = url;
+            memo.shareImagePath = path;
+            cloudSaveMemo(memo);
+            updateShareImageUI(memo);
+        }
+        showToast('画像を添付しました', 'check_circle');
+    } catch (e) {
+        console.error('[memoppa] share image upload failed:', e.code, e.message);
+        showToast('アップロードに失敗しました', 'error');
+    }
+}
+
+async function handleShareImageRemove() {
+    if (!currentUser || !currentMemoId) return;
+    const memo = memos.find(m => m.id === currentMemoId);
+    if (!memo || !memo.shareImageUrl) return;
+    const oldPath = memo.shareImagePath;
+    memo.shareImageUrl = null;
+    memo.shareImagePath = null;
+    cloudSaveMemo(memo);
+    updateShareImageUI(memo);
+    if (oldPath) {
+        try { await deleteObject(storageRef(storage, oldPath)); }
+        catch (e) { console.warn('[memoppa] share image delete failed (non-fatal):', e.code); }
+    }
+}
+
 async function cloudSaveMemo(memo) {
     if (!currentUser) return;
     try {
@@ -2483,6 +2568,22 @@ async function showSharePreview(shareId, isLoggedIn = false) {
             .replace(/\n{3,}/g, '\n\n').trim();
 
         if(titleEl) titleEl.textContent = data.title || '無題のプロンプト';
+
+        // 添付されたシェア用画像があれば表示
+        let spImageEl = document.getElementById('sharePreviewImage');
+        if (data.shareImageUrl) {
+            if (!spImageEl) {
+                spImageEl = document.createElement('img');
+                spImageEl.id = 'sharePreviewImage';
+                spImageEl.className = 'share-preview-image';
+                spImageEl.alt = '';
+                if (titleEl && titleEl.parentNode) titleEl.parentNode.insertBefore(spImageEl, titleEl);
+            }
+            spImageEl.src = data.shareImageUrl;
+            spImageEl.classList.remove('hidden');
+        } else if (spImageEl) {
+            spImageEl.classList.add('hidden');
+        }
 
         // ---- 作成者情報（ライブ参照：プロフィール変更が即座に反映される）----
         const authorEl = document.getElementById('sharePreviewAuthor');
@@ -2896,6 +2997,7 @@ async function doSharePrompt(memo, overrideContent, password) {
             previewCopyCount: 0,
             likeCount: 0,
             password: password || null,
+            shareImageUrl: (IMAGE_SHARE_ENABLED && memo.shareImageUrl) ? memo.shareImageUrl : null,
         };
         // ユーザーのサブコレクションに保存（権限エラー回避）
         const ref = await addDoc(collection(db, 'users', currentUser.uid, 'sharedPrompts'), shareData);

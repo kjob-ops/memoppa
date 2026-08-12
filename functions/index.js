@@ -41,8 +41,9 @@ async function fetchPromptData(shareId) {
     const truncated = content.length > 150;
     const fullLen = content.length;
     const sharedBy = fields.sharedBy?.stringValue || '';
+    const shareImageUrl = fields.shareImageUrl?.stringValue || '';
 
-    return { title, preview, truncated, fullLen, sharedBy };
+    return { title, preview, truncated, fullLen, sharedBy, shareImageUrl };
   } catch (e) {
     return null;
   }
@@ -52,10 +53,13 @@ async function handleSharePage(context, shareId, url) {
   const data = await fetchPromptData(shareId);
   if (!data) return context.next();
 
-  const { title, preview, truncated, fullLen, sharedBy } = data;
+  const { title, preview, truncated, fullLen, sharedBy, shareImageUrl } = data;
   const ogTitle = title;
   const ogDesc = preview || 'プロンプトシェア専用メモ帳 memoppa';
-  const ogImage = `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}&len=${fullLen || ''}&trunc=${truncated ? '1' : '0'}&by=${encodeURIComponent(sharedBy)}`;
+  // 添付画像があればそれをそのまま使い、無ければ今まで通り自動生成カードを使う
+  const ogImage = shareImageUrl
+    ? shareImageUrl
+    : `${OG_IMAGE_BASE}?title=${encodeURIComponent(ogTitle)}&body=${encodeURIComponent(ogDesc)}&len=${fullLen || ''}&trunc=${truncated ? '1' : '0'}&by=${encodeURIComponent(sharedBy)}`;
 
   const indexRes = await context.next();
   const html = await indexRes.text();

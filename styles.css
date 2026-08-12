@@ -13,6 +13,7 @@
   --text-secondary: #5f6368;
   --border-color: #dadce0;
   --accent-color: #0F6E56;
+  --accent-gradient: linear-gradient(135deg, #0a4a3a 0%, #0F6E56 35%, #1a8f7a 65%, #2dd4bf 100%);
   --pin-color: #d97706;
   --danger-color: #dc2626;
   --archive-bg: #059669;
@@ -33,6 +34,7 @@
   --text-secondary: #5f6368;
   --border-color: #dadce0;
   --accent-color: #0F6E56;
+  --accent-gradient: linear-gradient(135deg, #0a4a3a 0%, #0F6E56 35%, #1a8f7a 65%, #2dd4bf 100%);
   --pin-color: #d97706;
   --danger-color: #dc2626;
   --shadow: 0 4px 16px rgba(0,0,0,0.08);
@@ -48,6 +50,7 @@
   --text-secondary: #999999;
   --border-color: #333333;
   --accent-color: #10b981;
+  --accent-gradient: linear-gradient(135deg, #0F6E56 0%, #1a8f7a 45%, #2dd4bf 80%, #38bdf8 100%);
   --pin-color: #f59e0b;
   --danger-color: #ef4444;
   --archive-bg: #10b981;
@@ -111,7 +114,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 
 /* 上部のアクションボタン */
 .sidebar-actions-grid { margin-bottom: 16px; padding: 0 20px; }
-.new-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; background-color: var(--accent-color); color: white; border: 1px solid var(--accent-color); border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; font-family: inherit; line-height: 1; }
+.new-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; background: var(--accent-gradient); color: white; border: 1px solid var(--accent-color); border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; font-family: inherit; line-height: 1; }
 .new-btn-full .material-symbols-rounded { font-size: 18px; line-height: 1; display: flex; align-items: center; }
 .last-memo-shortcut { width: calc(100% - 40px); margin: 0 20px 16px; display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; border-radius: var(--radius-md); cursor: pointer; font-size: 12.5px; font-family: inherit; text-align: left; transition: 0.2s; }
 .last-memo-shortcut:hover { background: #e5e7eb; }
@@ -364,7 +367,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .ai-chip { padding: 10px 20px; border: 1.5px solid var(--border-color); border-radius: var(--radius-full); background: transparent; color: var(--text-primary); font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
 .ai-chip:hover { border-color: var(--accent-color); }
 .ai-chip.selected { background: var(--accent-color); border-color: var(--accent-color); color: white; }
-.onboarding-done { width: 100%; padding: 12px; background: var(--accent-color); color: white; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
+.onboarding-done { width: 100%; padding: 12px; background: var(--accent-gradient); color: white; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
 .onboarding-done:disabled { opacity: 0.4; cursor: not-allowed; }
 .onboarding-done:not(:disabled):hover { filter: brightness(1.08); }
 .onboarding-skip { background: none; border: none; color: var(--text-secondary); font-size: 12.5px; margin-top: 12px; cursor: pointer; text-decoration: underline; font-family: inherit; }
@@ -408,7 +411,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .onboarding-step-body kbd { font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 6px; background: var(--bg-sidebar); }
 .onboarding-step-body .inline-icon { font-size: 14px; vertical-align: -2px; color: var(--accent-color); }
 .onboarding-note { font-size: 13px; color: var(--text-secondary); margin: 6px 0 20px; }
-.onboarding-start-btn { width: 100%; padding: 13px; background: var(--accent-color); color: white; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
+.onboarding-start-btn { width: 100%; padding: 13px; background: var(--accent-gradient); color: white; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; font-family: inherit; }
 .onboarding-start-btn:hover { filter: brightness(1.08); }
 
 /* 設定内の使い方リンク */
@@ -429,6 +432,11 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 
 .editor-container { width: 100%; max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; height: 100%; padding-top: 56px; position: relative; transition: max-width 0.2s ease; overflow: hidden; }
 body.editor-narrow .editor-container { max-width: 720px; }
+.share-image-preview-wrap { position: relative; margin: 8px 28px 0; border-radius: var(--radius-md); overflow: hidden; max-width: 320px; flex-shrink: 0; }
+.share-image-preview-img { width: 100%; max-height: 160px; object-fit: cover; display: block; }
+.share-image-remove-btn { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(0,0,0,0.55); color: #fff; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.share-image-remove-btn .material-symbols-rounded { font-size: 16px; }
+.share-preview-image { width: 100%; max-height: 320px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 14px; display: block; }
 .memo-header { padding: 8px 28px 0 28px; margin-bottom: 4px; display: flex; justify-content: flex-end; align-items: flex-start; position: relative; flex-shrink: 0; gap: 8px; }
 .memo-title { flex: 1; font-size: 36px; font-weight: bold; border: none; outline: none; color: var(--text-primary); background-color: transparent; font-family: inherit; min-width: 0; }
 .memo-updated-at { display: block; font-size: 11px; color: var(--text-secondary); opacity: 0.7; white-space: nowrap; flex-shrink: 0; padding-top: 10px; }
@@ -912,7 +920,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 
 .share-review-actions { display: flex; gap: 10px; flex-shrink: 0; margin-bottom: 18px; }
 .share-review-cancel { flex: 1; padding: 11px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--bg-hover); color: var(--text-primary); font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; }
-.share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-color); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
+.share-review-confirm { flex: 1.4; padding: 11px; border: none; border-radius: 10px; background: var(--accent-gradient); color: white; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-family: inherit; }
 .share-review-confirm:hover { filter: brightness(1.08); }
 
 /* プロンプトカードの共有統計 */
@@ -952,7 +960,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .phc-stat-num { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
 .phc-stat-sep { font-size: 10px; color: var(--border-color); }
 .phc-actions { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: auto; }
-.phc-copy-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px; background: var(--accent-color); color: white; border: none; border-radius: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
+.phc-copy-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px; background: var(--accent-gradient); color: white; border: none; border-radius: 9px; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: 0.15s; font-family: inherit; }
 .phc-copy-btn:hover { filter: brightness(1.1); }
 .phc-copy-btn.copied { background: #22c55e; }
 .phc-copy-btn .material-symbols-rounded { font-size: 14px; }

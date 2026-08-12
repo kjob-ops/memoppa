@@ -42,7 +42,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=50"></head>
+    <link rel="stylesheet" href="styles.css?v=52"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -324,6 +324,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
             <div id="mobileActionMenu" class="mobile-action-menu hidden mobile-only" style="display: none;">
                 <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> <span id="actionPrivateLabel">非表示にする</span></button>
+                <button id="actionImageBtn2" class="menu-item"><span class="material-symbols-rounded">image</span> シェア用の画像を添付</button>
                 <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有する</button>
                 <button id="actionMailBtn2" class="menu-item"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                 <div class="menu-divider"></div>
@@ -343,9 +344,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                     </div>
                     <div id="quickPromptBar" class="quick-prompt-bar"></div>
                 </div>
+                <input type="file" id="shareImageFileInput" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+                <div id="shareImagePreviewWrap" class="share-image-preview-wrap hidden">
+                    <img id="shareImagePreviewImg" class="share-image-preview-img" alt="添付画像">
+                    <button id="shareImageRemoveBtn" class="share-image-remove-btn" title="添付を解除"><span class="material-symbols-rounded">close</span></button>
+                </div>
                 <div class="memo-header">
                     <div class="memo-actions pc-only">
                         <button id="mainAttachBtn" class="action-btn hidden" title="ファイルを添付"><span class="material-symbols-rounded">attach_file</span></button>
+                        <button id="mainImageBtn" class="action-btn" title="シェア用の画像を添付"><span class="material-symbols-rounded">image</span></button>
                         <button id="mainPromptBtn" class="action-btn" title="プロンプト登録・解除"><span class="material-symbols-rounded">bolt</span></button>
                         <button id="mainPinBtn" class="action-btn" title="ピン留め・解除"><span class="material-symbols-rounded">push_pin</span></button>
                         <button id="mainPrivateBtn" class="action-btn" title="非表示・解除"><span class="material-symbols-rounded">visibility_off</span></button>
@@ -684,7 +691,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=50"></script>
+    <script src="app.bundle.js?v=52"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">
