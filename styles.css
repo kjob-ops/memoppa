@@ -114,7 +114,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 
 /* 上部のアクションボタン */
 .sidebar-actions-grid { margin-bottom: 16px; padding: 0 20px; }
-.new-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; background: var(--accent-gradient); color: white; border: 1px solid var(--accent-color); border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; font-family: inherit; line-height: 1; }
+.new-btn-full { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 12px; background: var(--accent-gradient); color: white; border: none; border-radius: var(--radius-md); cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; font-family: inherit; line-height: 1; }
 .new-btn-full .material-symbols-rounded { font-size: 18px; line-height: 1; display: flex; align-items: center; }
 .last-memo-shortcut { width: calc(100% - 40px); margin: 0 20px 16px; display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; border-radius: var(--radius-md); cursor: pointer; font-size: 12.5px; font-family: inherit; text-align: left; transition: 0.2s; }
 .last-memo-shortcut:hover { background: #e5e7eb; }
@@ -940,7 +940,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 
 /* ========== プロンプトハブ カードグリッド ========== */
 .prompt-hub-list { flex: 1; overflow-y: auto; padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; align-content: start; }
-.prompt-hub-card { display: flex; flex-direction: column; background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: 14px; padding: 16px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; position: relative; }
+.prompt-hub-card { display: flex; flex-direction: column; background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: 14px; padding: 16px; transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s; position: relative; overflow: hidden; }
 .phc-shared-corner { position: absolute; top: 0; right: 0; width: 0; height: 0; border-style: solid; border-width: 0 52px 52px 0; border-color: transparent #0F6E56 transparent transparent; pointer-events: none; z-index: 2; }
 .phc-shared-corner-label { position: absolute; top: 8px; right: 3px; color: #fff; font-size: 10.5px; font-weight: 700; transform: rotate(45deg); pointer-events: none; z-index: 3; }
 .phc-title-shared { padding-right: 58px; }
