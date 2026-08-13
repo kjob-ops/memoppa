@@ -107,7 +107,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .sidebar-header { margin-bottom: 24px; padding: 0 20px; }
 .papier-logo { display: flex; align-items: center; gap: 8px; }
 .papier-logo .logo-img-icon { width: 26px; height: 26px; flex-shrink: 0; border-radius: 6px; }
-.papier-logo .logo-text { font-size: 20px; font-weight: 600; font-family: 'Baloo 2', 'Georgia', serif; color: #0F6E56; }
+.papier-logo .logo-text { font-size: 20px; font-weight: 600; font-family: 'Baloo 2', 'Georgia', serif; background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 .icon-button { background: none; border: none; cursor: pointer; color: var(--text-secondary); transition: transform 0.2s, background-color 0.2s; display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 50%;}
 .icon-button:hover, .icon-button.active { color: var(--text-primary); background-color: var(--bg-hover);}
@@ -848,6 +848,7 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-preview-screen.hidden { display: none; }
 .share-preview-box { width: 100%; max-width: 640px; background: transparent; border: none; border-radius: 0; padding: 24px 20px 60px 20px; box-shadow: none; position: relative; }
 .share-preview-logo { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; color: #0F6E56; margin-bottom: 10px; }
+.share-preview-logo-text { background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .share-preview-close-btn { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text-secondary, #6b7280); display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; }
 .share-preview-close-btn:hover { background: var(--bg-hover); }
 .share-preview-badge { display: inline-flex; align-items: center; gap: 5px; background: #e7f5f0; color: #0F6E56; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; margin-bottom: 8px; }
