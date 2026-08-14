@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential, GoogleAuthProvider, onAuthStateChanged, signOut } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, onSnapshot, getDoc, addDoc, updateDoc, increment, query, where, getDocs, limit } from "firebase/firestore";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+import JSZip from "jszip";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAj5Y7PLvRLRRl8Ay1JMUWjJsbgCAqygG0",
@@ -211,6 +212,7 @@ function showToastWithUndo(message, onUndo) {
 // 認証 & 初期化
 // ==========================================
 onAuthStateChanged(auth, (user) => {
+    document.getElementById('authLoadingScreen')?.classList.add('hidden');
     if (user) {
         currentUser = user; 
         loginScreen?.classList.add('hidden'); 
@@ -430,7 +432,6 @@ function renderAttachments(memo) {
     if(bulkDlBtn) bulkDlBtn.addEventListener('click', async () => {
         showToast('ZIPを準備中...', 'cloud_download');
         try {
-            const JSZip = (await import('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js')).default || window.JSZip;
             const zip = new JSZip();
             const token = await ensureDriveToken();
             await Promise.all(attachments.map(async (att) => {
@@ -3235,7 +3236,7 @@ function renderPromptHub(query = '', activeTag = null) {
         const card = document.createElement('div');
         card.className = `prompt-hub-card ${rarity.class} ${m.sharedRef ? 'is-shared' : ''}`;
         card.innerHTML = `
-            ${m.sharedRef ? '<div class="phc-shared-corner"></div><div class="phc-shared-corner-label">共有</div>' : ''}
+            ${m.sharedRef ? '<div class="phc-shared-corner-clip"><div class="phc-shared-corner"></div><div class="phc-shared-corner-label">共有</div></div>' : ''}
             <div class="phc-card-head" data-id="${m.id}">
                 <span id="rarityBadge_${m.id}"></span>
             </div>

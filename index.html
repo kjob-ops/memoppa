@@ -42,7 +42,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=54"></head>
+    <link rel="stylesheet" href="styles.css?v=56"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -88,7 +88,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
     </div>
 
-    <div id="loginScreen" class="login-screen">
+    <div id="authLoadingScreen" class="auth-loading-screen">
+        <div class="auth-loading-mark">
+            <svg viewBox="0 0 150 150"><path d="M28,116 C28,78 30,52 46,52 C62,52 64,78 64,116 C64,78 66,52 82,52 C96,52 98,72 98,90 C102,78 108,68 118,56" fill="none" stroke="#ffffff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/><circle cx="46" cy="52" r="7" fill="#ffffff"/></svg>
+        </div>
+    </div>
+
+    <div id="loginScreen" class="login-screen hidden">
         <div class="login-box">
             <!-- 共有プロンプトの案内バナー（共有URL経由のみ表示） -->
             <div id="sharePromptBanner" class="share-prompt-banner hidden">
@@ -691,7 +697,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=54"></script>
+    <script src="app.bundle.js?v=56"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">
