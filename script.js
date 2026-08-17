@@ -35,6 +35,16 @@ let currentUser = null;
 let currentMemoId = null;
 let draggedItem = null; // PC/モバイル共通：現在ドラッグ中の.memo-item要素
 document.addEventListener('mouseup', () => { if (draggedItem) draggedItem.setAttribute('draggable', false); });
+// メモ本文中のリンク（貼り付け・入力どちらでも）は常に別タブで開く
+document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    if (a.hasAttribute('target')) return; // 既に明示的にtargetが指定されているものは触らない
+    const href = a.getAttribute('href') || '';
+    if (!/^https?:\/\//i.test(href)) return; // 内部リンク・アンカー等は対象外
+    e.preventDefault();
+    window.open(href, '_blank', 'noopener,noreferrer');
+});
 let currentFilter = 'all'; 
 const expandedTagsIds = new Set();
 let currentSortIndex = 0; 
