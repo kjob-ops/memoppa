@@ -74,7 +74,8 @@ const sortOptions = [
     { id: 'updated-desc', label: '更新日が新しい順' },
     { id: 'updated-asc', label: '更新日が古い順' },
     { id: 'usecount-desc', label: '使用頻度が高い順' },
-    { id: 'title-asc', label: 'タイトル（あ→ん / A→Z）' }
+    { id: 'title-asc', label: 'タイトル（あ→ん / A→Z）' },
+    { id: 'manual', label: '手動で並び替え' }
 ];
 
 // ==========================================
@@ -3464,6 +3465,12 @@ function getFilteredMemos() {
     return filtered.sort((a, b) => {
         if (a.isPinned && !b.isPinned) return -1; if (!a.isPinned && b.isPinned) return 1;  
         if (currentFilter === 'prompt') { const diff = (b.useCount || 0) - (a.useCount || 0); if (diff !== 0) return diff; }
+        if (sortType === 'manual') {
+            const ao = a.manualOrder ?? 999999;
+            const bo = b.manualOrder ?? 999999;
+            if (ao !== bo) return ao - bo;
+            return new Date(b.updatedAt) - new Date(a.updatedAt);
+        }
         if (sortType === 'updated-desc') return new Date(b.updatedAt) - new Date(a.updatedAt);
         if (sortType === 'usecount-desc') return (b.useCount || 0) - (a.useCount || 0);
         if (sortType === 'updated-asc') return new Date(a.updatedAt) - new Date(b.updatedAt);
@@ -3725,15 +3732,15 @@ function renderMemoList() {
                     if (targetMemo && draggedMemo) {
                         const bounding = targetContainer.getBoundingClientRect();
                         const isAfter = (touch.clientY - (bounding.y + bounding.height / 2) > 0);
-                        draggedMemo.updatedAt = new Date(new Date(targetMemo.updatedAt).getTime() + (isAfter ? -1000 : 1000)).toISOString();
-                        cloudSaveMemo(draggedMemo); renderMemoList();
+                        applyManualReorder(draggedMemo, targetMemo, isAfter);
                     }
                 }
             });
 
-            const enableDrag = () => { draggedItem = item; item.setAttribute('draggable', true); };
-            const disableDrag = () => item.setAttribute('draggable', false);
-            dragHandle.addEventListener('mousedown', enableDrag);
+            const enableDrag = () => { draggedItem = item; item.setAttribute('draggable', 'true'); };
+            const disableDrag = () => { item.setAttribute('draggable', 'false'); };
+            // mousedownはdragHandleだけに付ける（カード本体クリックでドラッグ開始しないように）
+            dragHandle.addEventListener('mousedown', (e) => { e.stopPropagation(); enableDrag(); });
             // 注意: mouseleaveでdisableDragすると、ハンドルからカーソルが離れた瞬間
             // （＝ドラッグを始めた直後）にdraggable属性が消えてしまい、PCでの並び替えが
             // 一切発動しないバグになるため付けない。後始末はdragend/document側の共通mouseupに任せる。
@@ -3743,15 +3750,13 @@ function renderMemoList() {
             item.addEventListener('dragleave', function() { this.style.borderTop = ''; this.style.borderBottom = ''; });
             item.addEventListener('drop', function(e) {
                 e.preventDefault(); this.style.borderTop = ''; this.style.borderBottom = '';
-                if (draggedItem !== this) {
-                    const draggedId = e.dataTransfer.getData('text/plain');
-                    const targetMemo = memos.find(m => m.id === memo.id);
-                    const draggedMemo = memos.find(m => m.id === draggedId);
-                    if(targetMemo && draggedMemo) {
-                        const isAfter = (e.clientY - (this.getBoundingClientRect().y + this.getBoundingClientRect().height / 2) > 0);
-                        draggedMemo.updatedAt = new Date(new Date(targetMemo.updatedAt).getTime() + (isAfter ? -1000 : 1000)).toISOString();
-                        cloudSaveMemo(draggedMemo); renderMemoList();
-                    }
+                const draggedId = e.dataTransfer.getData('text/plain');
+                if (!draggedId || draggedId === memo.id) return; // 自分自身へのドロップは無視
+                const targetMemo = memos.find(m => m.id === memo.id);
+                const draggedMemo = memos.find(m => m.id === draggedId);
+                if (targetMemo && draggedMemo) {
+                    const isAfter = (e.clientY - (this.getBoundingClientRect().y + this.getBoundingClientRect().height / 2) > 0);
+                    applyManualReorder(draggedMemo, targetMemo, isAfter);
                 }
             });
             item.addEventListener('dragend', function() { this.classList.remove('sortable-ghost'); disableDrag(); memoList.querySelectorAll('.memo-item').forEach(el => { el.style.borderTop = ''; el.style.borderBottom = ''; }); });
@@ -3760,4 +3765,32 @@ function renderMemoList() {
         memoList.appendChild(swipeContainer);
     });
 }
+function applyManualReorder(draggedMemo, targetMemo, isAfter) {
+    // 手動ソートモードに自動切り替え（まだなら）
+    const manualIdx = sortOptions.findIndex(o => o.id === 'manual');
+    if (currentSortIndex !== manualIdx) {
+        currentSortIndex = manualIdx;
+        // 現在の表示順でmanualOrderを初期化
+        const visible = getFilteredMemos();
+        visible.forEach((m, i) => { m.manualOrder = i * 1000; });
+    }
+    // ターゲットの前後に挿入できるように間の値を計算
+    const visibleSorted = getFilteredMemos();
+    const targetIdx = visibleSorted.findIndex(m => m.id === targetMemo.id);
+    const insertIdx = isAfter ? targetIdx + 1 : targetIdx;
+    const before = visibleSorted[insertIdx - 1];
+    const after = visibleSorted[insertIdx];
+    let newOrder;
+    if (!before) {
+        newOrder = (after?.manualOrder ?? 1000) - 1000;
+    } else if (!after) {
+        newOrder = (before.manualOrder ?? 0) + 1000;
+    } else {
+        newOrder = ((before.manualOrder ?? 0) + (after.manualOrder ?? 0)) / 2;
+    }
+    draggedMemo.manualOrder = newOrder;
+    cloudSaveMemo(draggedMemo);
+    renderMemoList();
+}
+
 function escapeHtml(text) { return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }

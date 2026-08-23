@@ -544,6 +544,8 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     .memo-item.multi-select-active .checkbox-wrapper .custom-checkbox, .memo-item.selected .checkbox-wrapper .custom-checkbox { opacity: 1; }
     .drag-handle { opacity: 0.35; }
     .drag-handle:active { opacity: 1 !important; }
+    /* タッチ環境ではhoverが発生しないので、常に薄く表示しておく */
+    .memo-item .drag-handle { opacity: 0.25; }
     .list-action-btn { padding: 7px; }
 
     .mobile-editor-topbar {
