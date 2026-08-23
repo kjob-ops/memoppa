@@ -250,6 +250,9 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .drag-handle:hover { opacity: 1 !important; }
 .drag-handle:active { cursor: grabbing; opacity: 1 !important; color: var(--accent-color); }
 .drag-handle .material-symbols-rounded { font-size: 18px; }
+.sortable-ghost { opacity: 0.4; background: var(--bg-selected); }
+.sortable-chosen { box-shadow: 0 4px 16px rgba(15,110,86,0.18); }
+.sortable-drag { opacity: 0; }
 
 /* プロンプト庫 */
 .prompt-indicator { font-size: 14px !important; color: var(--accent-color); flex-shrink: 0; }
