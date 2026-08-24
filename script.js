@@ -3691,8 +3691,7 @@ let memoListSortable = null;
 function initMemoListSortable() {
     if (memoListSortable) { memoListSortable.destroy(); memoListSortable = null; }
     if (!memoList) return;
-    // ゴミ箱や並び替え非対象の状態では無効化
-    const isSortable = !multiSelectMode && sortOptions[currentSortIndex].id === 'manual';
+    // マルチ選択中のみ無効化。並び替えモードは問わず常にドラッグ可能にする
     memoListSortable = Sortable.create(memoList, {
         handle: '.drag-handle',
         animation: 150,
@@ -3704,7 +3703,18 @@ function initMemoListSortable() {
         scrollSpeed: 10,        // スクロール速度
         delay: 200,             // タッチ操作の場合の長押し時間（ms）
         delayOnTouchOnly: true, // delayはタッチ時のみ適用
-        disabled: !isSortable,  // 手動ソート以外では無効
+        disabled: multiSelectMode,
+        onStart: () => {
+            // ドラッグを開始したら自動的に「手動で並び替え」モードへ切り替える
+            const manualIdx = sortOptions.findIndex(o => o.id === 'manual');
+            if (currentSortIndex !== manualIdx) {
+                currentSortIndex = manualIdx;
+                // まだmanualOrderが無いメモは、現在の表示順を初期値として採番
+                getFilteredMemos().forEach((m, i) => {
+                    if (m.manualOrder === undefined || m.manualOrder === null) m.manualOrder = i * 10;
+                });
+            }
+        },
         onEnd: (evt) => {
             const movedId = evt.item.querySelector('.memo-item')?.dataset.id;
             if (!movedId) return;
