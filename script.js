@@ -3557,6 +3557,7 @@ function renderMemoList() {
             <div class="list-actions">
                 ${promptCopyHtml}
                 <button class="list-action-btn pin-btn ${memo.isPinned ? 'is-pinned' : ''}" data-id="${memo.id}" title="Pin"><span class="material-symbols-rounded">push_pin</span></button>
+                <button class="list-action-btn parent-btn" data-id="${memo.id}" title="子として整理"><span class="material-symbols-rounded">account_tree</span></button>
                 <button class="list-action-btn trash-btn" data-id="${memo.id}" title="Delete"><span class="material-symbols-rounded">delete</span></button>
             </div>`;
         }
@@ -3601,6 +3602,7 @@ function renderMemoList() {
                 if(btn.classList.contains('prompt-copy-btn')) copyPrompt(id);
                 if(btn.classList.contains('private-btn')) directPrivate(id);
                 if(btn.classList.contains('pin-btn')) directPin(id);
+                if(btn.classList.contains('parent-btn')) showParentPicker(id);
                 if(btn.classList.contains('trash-btn')) directDelete(id);
                 if(btn.classList.contains('restore-btn')) directRestore(id);
                 if(btn.classList.contains('delete-forever-btn')) directDelete(id);
@@ -3751,6 +3753,75 @@ function applyManualReorder(draggedMemo, targetMemo, isAfter) {
     draggedMemo.manualOrder = newOrder;
     cloudSaveMemo(draggedMemo);
     renderMemoList();
+}
+
+// 「子として整理」ピッカー（HTML変更不要、JSでオーバーレイを生成）
+function showParentPicker(memoId) {
+    const memo = memos.find(m => m.id === memoId);
+    if (!memo) return;
+
+    const existing = document.getElementById('parentPickerOverlay');
+    if (existing) existing.remove();
+
+    const candidates = memos.filter(m => !m.isTrashed && m.id !== memoId && m.parentId !== memoId);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'parentPickerOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg-primary,#fff);color:var(--text-primary,#111);border-radius:12px;max-width:360px;width:90%;max-height:70vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,0.25);';
+
+    const header = document.createElement('div');
+    header.style.cssText = 'padding:14px 16px;font-weight:600;border-bottom:1px solid var(--border-color,#eee);';
+    header.textContent = '「' + (memo.title || '無題') + '」の親を選択';
+    box.appendChild(header);
+
+    const list = document.createElement('div');
+    list.style.cssText = 'overflow-y:auto;flex:1;';
+
+    const makeRow = (label, onClick, isActive) => {
+        const row = document.createElement('div');
+        row.textContent = label;
+        row.style.cssText = 'padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border-color,#f2f2f2);' + (isActive ? 'font-weight:600;color:var(--accent-color,#0F6E56);' : '');
+        row.addEventListener('click', onClick);
+        row.addEventListener('mouseenter', () => row.style.background = 'var(--bg-secondary,#f5f5f5)');
+        row.addEventListener('mouseleave', () => row.style.background = '');
+        return row;
+    };
+
+    const setParent = (parentId) => {
+        memo.parentId = parentId;
+        cloudSaveMemo(memo);
+        renderMemoList();
+        overlay.remove();
+        showToast(parentId ? '子として整理しました' : 'ルートに戻しました', 'account_tree');
+    };
+
+    list.appendChild(makeRow('（ルートに戻す・親なし）', () => setParent(null), !memo.parentId));
+    candidates.forEach(m => {
+        list.appendChild(makeRow(m.title || '無題', () => setParent(m.id), memo.parentId === m.id));
+    });
+    if (!candidates.length) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding:16px;color:var(--text-secondary,#888);font-size:14px;';
+        empty.textContent = '他に選べるメモがありません';
+        list.appendChild(empty);
+    }
+    box.appendChild(list);
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'padding:10px 16px;text-align:right;border-top:1px solid var(--border-color,#eee);';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'キャンセル';
+    cancelBtn.style.cssText = 'background:none;border:none;color:var(--text-secondary,#888);cursor:pointer;padding:6px 10px;';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+    footer.appendChild(cancelBtn);
+    box.appendChild(footer);
+
+    overlay.appendChild(box);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
 }
 
 function escapeHtml(text) { return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
