@@ -1528,7 +1528,7 @@ function setupEventListeners() {
                     isPrivate: !!item.isPrivate,
                     archived: !!item.archived,
                     isTrashed: false,
-                    createdAt: item.createdAt || new Date().toISOString(),
+                    parentId: null,
                     updatedAt: item.updatedAt || new Date().toISOString(),
                 };
                 memos.unshift(newMemo);
@@ -1610,7 +1610,7 @@ function createNewMemo() {
     setFilter('all'); 
     
     const newId = "memo_" + Date.now();
-    const newMemo = { id: newId, title: '', content: '', archived: false, isPinned: false, isPrivate: false, isTrashed: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const newMemo = { id: newId, title: '', content: '', archived: false, isPinned: false, isPrivate: false, isTrashed: false, parentId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     memos.unshift(newMemo); cloudSaveMemo(newMemo); selectMemo(newId, true);
 }
 
@@ -1693,7 +1693,7 @@ function createWelcomeMemo(selectedAis = []) {
         }
     ];
     samples.forEach(s => {
-        const m = { ...s, archived: false, isPinned: false, isPrivate: false, isTrashed: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        const m = { ...s, archived: false, isPinned: false, isPrivate: false, isTrashed: false, parentId: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         memos.unshift(m); cloudSaveMemo(m);
     });
 
@@ -1707,10 +1707,7 @@ function createWelcomeMemo(selectedAis = []) {
     const welcomeId = `memo_${now+4}`;
     const welcomeMemo = {
         id: welcomeId, title: 'ようこそ memoppa へ！🚀', content,
-        archived: false, isPinned: true, isPrivate: false, isTrashed: false,
-        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-    };
-    memos.unshift(welcomeMemo); cloudSaveMemo(welcomeMemo); selectMemo(welcomeId, true);
+        archived: false, isPinned: true, isPrivate: false, isTrashed: false, parentId: null, cloudSaveMemo(welcomeMemo); selectMemo(welcomeId, true);
 }
 
 function selectMemo(id, openEditorInMobile = true) {
@@ -3057,9 +3054,7 @@ async function importSharedPrompt(shareId) {
             title: data.title,
             content: importedContent,
             isPrompt: true, useCount: 0,
-            archived: false, isPinned: false, isPrivate: false, isTrashed: false,
-            createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-            // 共有元への還流に使う（uid/docId形式で保存）
+            archived: false, isPinned: false, isPrivate: false, isTrashed: false, parentId: null,
             sharedRef: uid ? `${uid}/${docId}` : docId,
         };
         memos.unshift(newMemo); cloudSaveMemo(newMemo); renderMemoList(); selectMemo(newMemo.id);
