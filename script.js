@@ -722,6 +722,17 @@ function purgeExpiredTrash() {
     });
 }
 
+// onSnapshotは1回の操作につき複数回（ローカルキャッシュ→サーバー確定）発火するため、
+// 短時間にまとめて1回だけrenderMemoList()するためのデバウンス
+let _renderMemoListTimer = null;
+function scheduleRenderMemoList() {
+    clearTimeout(_renderMemoListTimer);
+    _renderMemoListTimer = setTimeout(() => {
+        _renderMemoListTimer = null;
+        renderMemoList();
+    }, 60);
+}
+
 function initRealtimeMemos() {
     if (unsubscribeMemos) unsubscribeMemos();
     userHasSelectedMemo = false; // 新しいログインセッションのたびにリセット
@@ -750,7 +761,7 @@ function initRealtimeMemos() {
                 updateEditorTagsDisplay(); updateCharCount();
             }
         }
-        updateSidebarTags(); renderMemoList(); renderLastMemoShortcut();
+        updateSidebarTags(); scheduleRenderMemoList(); renderLastMemoShortcut();
     });
 }
 
