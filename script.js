@@ -1718,7 +1718,12 @@ function createWelcomeMemo(selectedAis = []) {
     const welcomeId = `memo_${now+4}`;
     const welcomeMemo = {
         id: welcomeId, title: 'ようこそ memoppa へ！🚀', content,
-        archived: false, isPinned: true, isPrivate: false, isTrashed: false, parentId: null, cloudSaveMemo(welcomeMemo); selectMemo(welcomeId, true);
+        archived: false, isPinned: true, isPrivate: false, isTrashed: false, parentId: null,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+    };
+    memos.unshift(welcomeMemo);
+    cloudSaveMemo(welcomeMemo);
+    selectMemo(welcomeId, true);
 }
 
 function selectMemo(id, openEditorInMobile = true) {
