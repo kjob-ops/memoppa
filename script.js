@@ -3699,6 +3699,8 @@ let memoListSortable = null;
 function initMemoListSortable() {
     if (memoListSortable) { memoListSortable.destroy(); memoListSortable = null; }
     if (!memoList) return;
+    if (typeof Sortable === 'undefined') { console.error('[memoppa] Sortable library not loaded'); return; }
+    try {
     // マルチ選択中のみ無効化。並び替えモードは問わず常にドラッグ可能にする
     memoListSortable = Sortable.create(memoList, {
         handle: '.drag-handle',
@@ -3736,6 +3738,9 @@ function initMemoListSortable() {
             renderMemoList();
         }
     });
+    } catch (err) {
+        console.error('[memoppa] Sortable init failed', err);
+    }
 }
 
 function applyManualReorder(draggedMemo, targetMemo, isAfter) {

@@ -245,11 +245,11 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .list-action-btn.private-btn.is-private { color: var(--danger-color); opacity: 1; }
 
 .memo-item.sortable-ghost { opacity: 0.55; background-color: var(--bg-selected); box-shadow: 0 10px 24px rgba(0,0,0,0.25); outline: 2px solid var(--accent-color); outline-offset: -2px; transform: scale(1.03); transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s; z-index: 50; }
-.drag-handle { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; color: var(--text-secondary); cursor: grab; opacity: 0; transition: opacity 0.2s; flex-shrink: 0; touch-action: none; }
-.memo-item:hover .drag-handle, .memo-item.multi-select-active .drag-handle, .memo-item.selected .drag-handle { opacity: 0.5; }
-.drag-handle:hover { opacity: 1 !important; }
-.drag-handle:active { cursor: grabbing; opacity: 1 !important; color: var(--accent-color); }
-.drag-handle .material-symbols-rounded { font-size: 18px; }
+.drag-handle { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: var(--text-secondary); cursor: grab; opacity: 0.35; transition: opacity 0.2s, background-color 0.2s; flex-shrink: 0; touch-action: none; border-radius: 6px; }
+.memo-item:hover .drag-handle, .memo-item.multi-select-active .drag-handle, .memo-item.selected .drag-handle { opacity: 0.8; }
+.drag-handle:hover { opacity: 1 !important; background-color: var(--bg-selected); }
+.drag-handle:active { cursor: grabbing; opacity: 1 !important; color: var(--accent-color); background-color: var(--bg-selected); }
+.drag-handle .material-symbols-rounded { font-size: 22px; }
 .sortable-ghost { opacity: 0.4; background: var(--bg-selected); }
 .sortable-chosen { box-shadow: 0 4px 16px rgba(15,110,86,0.18); }
 .sortable-drag { opacity: 0; }
@@ -545,10 +545,10 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     .checkbox-wrapper { display: none; }
     .memo-item.multi-select-active .checkbox-wrapper, .memo-item.selected .checkbox-wrapper { display: flex; }
     .memo-item.multi-select-active .checkbox-wrapper .custom-checkbox, .memo-item.selected .checkbox-wrapper .custom-checkbox { opacity: 1; }
-    .drag-handle { opacity: 0.35; }
+    .drag-handle { opacity: 0.6; }
     .drag-handle:active { opacity: 1 !important; }
-    /* タッチ環境ではhoverが発生しないので、常に薄く表示しておく */
-    .memo-item .drag-handle { opacity: 0.25; }
+    /* タッチ環境ではhoverが発生しないので、常に見える状態にしておく */
+    .memo-item .drag-handle { opacity: 0.6; }
     .list-action-btn { padding: 7px; }
 
     .mobile-editor-topbar {
