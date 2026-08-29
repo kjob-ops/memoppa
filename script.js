@@ -258,6 +258,17 @@ onAuthStateChanged(auth, (user) => {
             // ログイン済みでも自動インポートせず、プレビュー＋「保存する」ボタンを表示
             setTimeout(() => showSharePreview(shareId, true), 800);
         }
+        // 拡張機能の「Webアプリで開く」からの遷移（?open=memoId）
+        const urlOpen = new URLSearchParams(location.search).get('open');
+        if (urlOpen) {
+            history.replaceState({}, '', location.pathname);
+            const tryOpen = () => {
+                const m = memos.find(m => m.id === urlOpen && !m.isTrashed);
+                if (m) { selectMemo(urlOpen, false); return true; }
+                return false;
+            };
+            if (!tryOpen()) setTimeout(tryOpen, 900); // onSnapshotの初回反映を少し待つ
+        }
     } else {
         currentUser = null;
         appContainer?.classList.add('hidden');
@@ -280,6 +291,13 @@ const GOOGLE_OAUTH_CLIENT_ID = "884448331927-l8qur6hvn1h4hghtdrkulsr3mufn8bna.ap
 
 function isExtensionEnv() {
     return typeof chrome !== 'undefined' && !!(chrome.identity && chrome.identity.launchWebAuthFlow);
+}
+if (isExtensionEnv()) {
+    // 拡張機能はシンプルな「書く・見る・使う」に機能を絞る。
+    // 該当UIの非表示はCSS側で body.is-extension を見て制御する（styles.css参照）。
+    document.documentElement.classList.add('is-extension');
+    document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-extension'));
+    if (document.body) document.body.classList.add('is-extension');
 }
 
 async function signInWithChromeIdentity() {
@@ -744,7 +762,16 @@ function initRealtimeMemos() {
         
         // オンボーディングは loadUserSettings の hasSeenOnboarding フラグで表示される
         if (!userHasSelectedMemo) {
-            // ユーザーがまだ何も選んでいない間は、オフラインキャッシュ→サーバーの2段階応答で
+            if (isExtensionEnv()) {
+                // 拡張機能は「サッと開いて続きを書く」用途のため、Webアプリ本体とは違い
+                // 前回開いていたメモを自動的に表示する（トップ画面で止めない）
+                let lastId = null;
+                try { lastId = localStorage.getItem('memoppa_lastMemoId'); } catch(e) {}
+                const lastMemo = lastId ? memos.find(m => m.id === lastId && !m.isTrashed) : null;
+                const firstActive = lastMemo || memos.find(m => !m.isTrashed);
+                if (firstActive) selectMemo(firstActive.id, false);
+            }
+            // Webアプリ本体は、ユーザーがまだ何も選んでいない間は、オフラインキャッシュ→サーバーの2段階応答で
             // onSnapshotが複数回呼ばれても、常にトップ画面（未選択）のままにする
             // （「前回開いていたメモ」はサイドバーのショートカットからワンタップで開ける）
         } else if (!currentMemoId || !memos.some(m => m.id === currentMemoId)) {
@@ -1180,6 +1207,11 @@ function setupEventListeners() {
         } catch (error) { showToast('送信に失敗しました', 'error'); btnElement.innerHTML = originalHtml; }
     };
     if(mainMailBtn) mainMailBtn.addEventListener('click', () => handleMail(mainMailBtn));
+    const openInWebappBtn = document.getElementById('openInWebappBtn');
+    if(openInWebappBtn) openInWebappBtn.addEventListener('click', () => {
+        if (!currentMemoId) return;
+        window.open(`https://memoppa.app/?open=${encodeURIComponent(currentMemoId)}`, '_blank', 'noopener,noreferrer');
+    });
     if(mobilePinBtn) mobilePinBtn.addEventListener('click', () => togglePin());
 
     if(allBtn) allBtn.addEventListener('click', () => setFilter('all'));
@@ -1799,7 +1831,7 @@ function updateCurrentMemo() {
     const memo = memos.find(m => m.id === currentMemoId);
     if (memo && !memo.isTrashed) {
         if(memoTitle) memo.title = memoTitle.value; if(memoContent) memo.content = memoContent.innerHTML; 
-        memo.updatedAt = new Date().toISOString(); cloudSaveMemo(memo); renderMemoList();
+        memo.updatedAt = new Date().toISOString(); cloudSaveMemo(memo); scheduleRenderMemoList();
     }
 }
 
@@ -2778,6 +2810,7 @@ async function openShareReviewModal(memo) {
                     個人情報らしき記述は見つかりませんでした
                 </div>
             `}
+            ${isExtensionEnv() ? '' : `
             <div class="share-review-password">
                 <label class="share-review-password-toggle">
                     <input type="checkbox" id="shareReviewPasswordToggle">
@@ -2785,6 +2818,7 @@ async function openShareReviewModal(memo) {
                 </label>
                 <input type="text" id="shareReviewPasswordInput" class="hidden" placeholder="合言葉を入力" maxlength="30">
             </div>
+            `}
             <div class="share-review-actions">
                 <button class="share-review-cancel">キャンセル</button>
                 <button class="share-review-confirm"><span class="material-symbols-rounded">share</span> 共有URLを発行</button>
@@ -3704,6 +3738,7 @@ let memoListSortable = null;
 function initMemoListSortable() {
     if (memoListSortable) { memoListSortable.destroy(); memoListSortable = null; }
     if (!memoList) return;
+    if (isExtensionEnv()) return; // 拡張機能では並び替え機能自体を提供しない（シンプル化）
     if (typeof Sortable === 'undefined') { console.error('[memoppa] Sortable library not loaded'); return; }
     try {
     // マルチ選択中のみ無効化。並び替えモードは問わず常にドラッグ可能にする
@@ -3778,6 +3813,7 @@ function applyManualReorder(draggedMemo, targetMemo, isAfter) {
 
 // 「子として整理」ピッカー（HTML変更不要、JSでオーバーレイを生成）
 function showParentPicker(memoId) {
+    if (isExtensionEnv()) return; // 拡張機能では提供しない機能（シンプル化）
     const memo = memos.find(m => m.id === memoId);
     if (!memo) return;
 
