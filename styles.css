@@ -1285,3 +1285,13 @@ body.is-extension .tag-list-search-mode .tag-search-mode-btn { display: none !im
 body.is-extension .share-review-password { display: none !important; }
 body.is-extension .open-in-webapp-btn { display: inline-flex !important; }
 .open-in-webapp-btn { display: none; align-items: center; gap: 4px; }
+
+/* スマホ：エッジスワイプで戻る操作中の軽い視覚フィードバック */
+@media (max-width: 768px) {
+    .main-content { transition: transform 0.15s ease, opacity 0.15s ease; }
+    .main-content.swipe-back-active { transform: translateX(12px); opacity: 0.85; }
+}
+
+/* 本文中に自動変換されたリンクの見た目 */
+.memo-content a { color: var(--accent-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
+.memo-content a:hover { opacity: 0.8; }

@@ -898,6 +898,45 @@ function toggleSidebar(forceClose = false) {
 function showMobileEditor() { appContainer?.classList.add('sp-view-editor'); }
 function showMobileList() { appContainer?.classList.remove('sp-view-editor'); }
 
+// スマホ版：画面左端からのスワイプで一覧に戻る（iOSのネイティブ戻るジェスチャーに近い挙動）
+function setupMobileSwipeBack() {
+    const mainContent = document.getElementById('mainContent');
+    if (!mainContent) return;
+    const EDGE_ZONE = 24;      // 画面左端から何pxまでを起点として許可するか
+    const THRESHOLD = 70;      // これ以上右へ動いたら「戻る」とみなす
+    const MAX_VERTICAL = 60;   // 縦方向にこれ以上動いたらスクロールとみなしキャンセル
+    let startX = 0, startY = 0, tracking = false, cancelled = false;
+
+    mainContent.addEventListener('touchstart', (e) => {
+        if (window.innerWidth > 768) return;
+        if (!appContainer || !appContainer.classList.contains('sp-view-editor')) return;
+        const t = e.touches[0];
+        if (t.clientX > EDGE_ZONE) return; // 端以外から始まったタッチは対象外
+        startX = t.clientX; startY = t.clientY; tracking = true; cancelled = false;
+    }, { passive: true });
+
+    mainContent.addEventListener('touchmove', (e) => {
+        if (!tracking || cancelled) return;
+        const t = e.touches[0];
+        const dx = t.clientX - startX, dy = t.clientY - startY;
+        if (Math.abs(dy) > MAX_VERTICAL) { cancelled = true; return; } // 縦スクロール優先
+        if (dx > 10) mainContent.classList.add('swipe-back-active');
+    }, { passive: true });
+
+    mainContent.addEventListener('touchend', (e) => {
+        mainContent.classList.remove('swipe-back-active');
+        if (!tracking) return;
+        tracking = false;
+        if (cancelled) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - startX, dy = t.clientY - startY;
+        if (dx > THRESHOLD && Math.abs(dy) < MAX_VERTICAL) {
+            updateCurrentMemo();
+            showMobileList();
+        }
+    });
+}
+
 function toggleMultiSelect(id) {
     if (!multiSelectMode) { 
         multiSelectMode = true; 
@@ -1017,6 +1056,7 @@ function setupEventListeners() {
     if(mobileNewMemoFab) mobileNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(promptHubNewMemoFab) promptHubNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
+    setupMobileSwipeBack();
     const promptHubBackBtn = document.getElementById('promptHubBackBtn');
     if(promptHubBackBtn) promptHubBackBtn.addEventListener('click', () => setFilter('all'));
 
@@ -1485,6 +1525,9 @@ function setupEventListeners() {
         }
     });
     if(memoContent) memoContent.addEventListener('input', triggerSave);
+    // 本文中のURL文字列を、フォーカスを外れたタイミングで実際のリンク(<a>タグ)に変換する
+    // （入力中に毎回変換するとカーソル位置がずれるため、編集を終えた瞬間だけ実行）
+    if(memoContent) memoContent.addEventListener('blur', () => { linkifyMemoContent(memoContent); });
 
     if(maskToggleButton) maskToggleButton.addEventListener('click', () => { isMasked = !isMasked; updateMaskButtonIcon(); document.body.classList.toggle('mask-mode', isMasked); });
 
@@ -3882,3 +3925,47 @@ function showParentPicker(memoId) {
 }
 
 function escapeHtml(text) { return text ? text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") : ''; }
+
+// 本文中のプレーンテキストのURLを実際の<a>タグに変換する。
+// 既にリンク化されている部分（<a>タグの中）は対象外にするため、テキストノードだけを走査する。
+const LINKIFY_URL_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]"'）」』】])/gi;
+function linkifyMemoContent(el) {
+    if (!el) return;
+    // すでにフォーカスが外れていて選択範囲を気にする必要が無いタイミングでのみ呼ばれる想定
+    let changed = false;
+    const walk = (node) => {
+        for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                if (!LINKIFY_URL_RE.test(child.textContent)) { LINKIFY_URL_RE.lastIndex = 0; continue; }
+                LINKIFY_URL_RE.lastIndex = 0;
+                const frag = document.createDocumentFragment();
+                let lastIndex = 0;
+                let m;
+                while ((m = LINKIFY_URL_RE.exec(child.textContent)) !== null) {
+                    if (m.index > lastIndex) frag.appendChild(document.createTextNode(child.textContent.slice(lastIndex, m.index)));
+                    const a = document.createElement('a');
+                    a.href = m[1];
+                    a.textContent = m[1];
+                    frag.appendChild(a);
+                    lastIndex = m.index + m[1].length;
+                }
+                if (lastIndex < child.textContent.length) frag.appendChild(document.createTextNode(child.textContent.slice(lastIndex)));
+                node.replaceChild(frag, child);
+                changed = true;
+            } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName !== 'A') {
+                walk(child);
+            }
+        }
+    };
+    walk(el);
+    if (changed) { memo_linkify_touch(el); }
+}
+function memo_linkify_touch(el) {
+    // リンク化した内容を、通常の保存経路にそのまま乗せる（triggerSave相当の即時保存）
+    const memo = memos.find(m => m.id === currentMemoId);
+    if (!memo) return;
+    memo.content = el.innerHTML;
+    memo.updatedAt = new Date().toISOString();
+    cloudSaveMemo(memo);
+    scheduleRenderMemoList();
+}
