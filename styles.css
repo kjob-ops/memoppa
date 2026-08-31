@@ -151,6 +151,7 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .filter-btn { flex: 1; min-width: 0; padding: 7px 4px; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; transition: 0.2s; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #allBtn { flex: 0 1 auto; padding: 7px 12px; }
 .filter-btn.prompt-tab { flex: 1.25; }
+.filter-btn.pin-tab { flex: 1.1; }
 .filter-btn:hover { background-color: var(--bg-hover); }
 .filter-btn.active { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
 .sort-btn-compact { flex-shrink: 0; width: 30px; height: 30px; padding: 0; background: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -165,6 +166,8 @@ body.sidebar-open .menu-btn { opacity: 0; pointer-events: none; }
 .sort-menu-item .material-symbols-rounded { font-size: 16px; color: var(--accent-color); }
 .filter-btn.prompt-tab { gap: 1px; }
 .filter-btn.prompt-tab .material-symbols-rounded { font-size: 13px; }
+.filter-btn.pin-tab { gap: 1px; }
+.filter-btn.pin-tab .material-symbols-rounded { font-size: 13px; }
 
 .sidebar-tags-container { display: none; flex-direction: row; flex-wrap: nowrap; gap: 6px; margin: 0 0 0 0; max-height: none; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; background: var(--bg-primary); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); padding: 10px 16px; position: relative; }
 .sidebar-tags-container::-webkit-scrollbar { display: none; }
@@ -916,6 +919,9 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 .share-review-preview-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 .share-review-preview { background: #f8faf9; border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; font-size: 12.5px; color: #374151; line-height: 1.7; max-height: 140px; overflow-y: auto; margin-bottom: 18px; font-family: 'SFMono-Regular','Consolas',monospace; white-space: pre-wrap; word-break: break-word; }
 .share-review-password { flex-shrink: 0; margin-bottom: 14px; }
+.share-review-more-toggle { display: flex; align-items: center; gap: 2px; background: none; border: none; color: var(--text-secondary); font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 0; margin-bottom: 6px; }
+.share-review-more-toggle:hover { color: var(--text-primary); }
+.share-review-more-toggle .material-symbols-rounded { font-size: 18px; }
 .share-review-password-toggle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
 .share-review-password-toggle input[type="checkbox"] { width: 16px; height: 16px; }
 .share-review-password #shareReviewPasswordInput { width: 100%; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 13px; font-family: inherit; }

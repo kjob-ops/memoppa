@@ -42,7 +42,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=68"></head>
+    <link rel="stylesheet" href="styles.css?v=70"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -198,7 +198,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 </div>
                 <div class="filter-sort-row">
                     <div class="filter-buttons">
-                        <button id="allBtn" class="filter-btn active">すべて</button>
+                        <button id="allBtn" class="filter-btn active">一覧</button>
+                        <button id="pinFilterBtn" class="filter-btn pin-tab" title="ピン留めしたメモ"><span class="material-symbols-rounded">push_pin</span>ピン<span id="pinCountBadge" class="prompt-count-badge hidden"></span></button>
                         <button id="promptFilterBtn" class="filter-btn prompt-tab" title="プロンプト庫"><span class="material-symbols-rounded">bolt</span>プロンプト<span id="promptCountBadge" class="prompt-count-badge hidden"></span></button>
                     </div>
                     <div class="filter-more-wrap">
@@ -332,7 +333,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <button id="actionPrivateBtn" class="menu-item"><span class="material-symbols-rounded">visibility_off</span> <span id="actionPrivateLabel">非表示にする</span></button>
                 <button id="actionImageBtn2" class="menu-item"><span class="material-symbols-rounded">image</span> シェア用の画像を添付</button>
                 <button id="actionShareBtn2" class="menu-item"><span class="material-symbols-rounded">share</span> 共有する</button>
-                <button id="actionMailBtn2" class="menu-item"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                 <div class="menu-divider"></div>
                 <button id="actionDeleteBtn" class="menu-item danger"><span class="material-symbols-rounded">delete</span> 削除</button>
             </div>
@@ -369,7 +369,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                         <div class="action-more-wrap">
                             <button id="mainMoreBtn" class="action-btn" title="その他の操作"><span class="material-symbols-rounded">more_horiz</span></button>
                             <div id="memoMoreMenu" class="memo-more-menu hidden">
-                                <button id="mainMailBtn" class="more-menu-item" title="Send to Mail"><span class="material-symbols-rounded">mail</span> メールで送る</button>
                                 <div class="more-menu-divider"></div>
                                 <button id="mainDeleteBtn" class="more-menu-item danger" title="削除"><span class="material-symbols-rounded">delete</span> 削除</button>
                             </div>
@@ -629,14 +628,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             </div>
 
             <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
-                <label>メール転送先</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="email" id="targetEmailInput" class="settings-select" placeholder="your@email.com" style="flex: 1;">
-                    <button id="saveEmailBtn" class="settings-action-btn" style="flex: 0 0 auto; padding: 0 16px; font-weight: bold;">Register</button>
-                </div>
-            </div>
-
-            <div class="settings-group" style="border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 16px;">
                 <label style="color: var(--accent-color); display: flex; align-items: center; gap: 4px;">
                     <span class="material-symbols-rounded" style="font-size: 18px;">favorite</span> 友達を招待する
                 </label>
@@ -698,7 +689,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=68"></script>
+    <script src="app.bundle.js?v=70"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

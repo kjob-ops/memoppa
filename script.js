@@ -26,7 +26,6 @@ const storage = getStorage(app);
 // ボタン・アップロード・OGP反映のすべてが無効化され、簡単に元に戻せる。
 const IMAGE_SHARE_ENABLED = true;
 const provider = new GoogleAuthProvider();
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz1CeAOVkrXfkAueQGWN-MxoReujyCJ7YOlk1Ssr0uyt5X4BWiHgP01COD4fgyrm6JN/exec";
 
 // ==========================================
 // 状態管理
@@ -69,7 +68,6 @@ let fontFamilyPc = 'system';
 let fontSizePc = '16px';
 let fontFamilyMobile = 'system';
 let fontSizeMobile = '15px';
-let targetEmail = ''; 
 
 const sortOptions = [
     { id: 'updated-desc', label: '更新日が新しい順' },
@@ -97,13 +95,13 @@ const newMemoBtn = document.getElementById('newMemoBtn');
 const mainPinBtn = document.getElementById('mainPinBtn');
 const mainPromptBtn = document.getElementById('mainPromptBtn');
 const promptFilterBtn = document.getElementById('promptFilterBtn');
+const pinFilterBtn = document.getElementById('pinFilterBtn');
 const promptVarModal = document.getElementById('promptVarModal');
 const promptVarFields = document.getElementById('promptVarFields');
 const promptVarPreview = document.getElementById('promptVarPreview');
 const promptVarCopyBtn = document.getElementById('promptVarCopyBtn');
 const closePromptVarBtn = document.getElementById('closePromptVarBtn');
 const mainPrivateBtn = document.getElementById('mainPrivateBtn');
-const mainMailBtn = document.getElementById('mainMailBtn'); 
 const mainCopyBtn = document.getElementById('mainCopyBtn'); 
 const mainDeleteBtn = document.getElementById('mainDeleteBtn');
 
@@ -153,8 +151,6 @@ const themeLightBtn = document.getElementById('themeLightBtn');
 const themeDarkBtn = document.getElementById('themeDarkBtn');
 const fontFamilySelect = document.getElementById('fontFamilySelectPc'); // 後方互換
 const fontSizeBtns = document.querySelectorAll('.font-size-btn-pc');
-const targetEmailInput = document.getElementById('targetEmailInput');
-const saveEmailBtn = document.getElementById('saveEmailBtn'); 
 
 const exportAiBtn = document.getElementById('exportAiBtn'); 
 const exportDataBtn = document.getElementById('exportDataBtn');
@@ -995,28 +991,7 @@ function bulkTrashOrRestore() {
     }
 }
 
-async function bulkMailSend(btnElement) {
-    if (!targetEmailInput || !targetEmailInput.value) { alert('Settingsで転送先メールアドレスを登録してください'); return; }
-    const originalHtml = btnElement.innerHTML; 
-    btnElement.innerHTML = '<span class="material-symbols-rounded" style="animation: spin 2s linear infinite;">hourglass_empty</span>';
-    
-    let combinedBody = '';
-    selectedMemos.forEach(id => {
-        const m = memos.find(x => x.id === id);
-        if(m) combinedBody += `【${m.title || '無題のメモ'}】\n${(m.content||'').replace(/<[^>]*>/g, '')}\n\n`;
-    });
 
-    try {
-        const formData = new URLSearchParams(); 
-        formData.append('to', targetEmailInput.value); 
-        formData.append('subject', `[memoppa] ${selectedMemos.size} Notes Export`); 
-        formData.append('body', combinedBody);
-        await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: formData });
-        btnElement.innerHTML = '<span class="material-symbols-rounded">check_circle</span>'; 
-        showToast('メールを送信しました！', 'send');
-        setTimeout(() => { btnElement.innerHTML = originalHtml; exitMultiSelect(); }, 2000);
-    } catch (error) { showToast('送信に失敗しました', 'error'); btnElement.innerHTML = originalHtml; }
-}
 
 function setupEventListeners() {
     initCmdPalette();
@@ -1091,6 +1066,7 @@ function setupEventListeners() {
         if(wrap) { wrap.classList.add('hidden'); localStorage.setItem('memoppaQpBarOpen', '0'); }
     });
     if(promptFilterBtn) promptFilterBtn.addEventListener('click', () => setFilter('prompt'));
+    if(pinFilterBtn) pinFilterBtn.addEventListener('click', () => setFilter('pin'));
     // ･･メニュー
     const filterMoreBtn = document.getElementById('filterMoreBtn');
     const filterMoreMenu = document.getElementById('filterMoreMenu');
@@ -1185,16 +1161,10 @@ function setupEventListeners() {
     if(actionPinBtn) actionPinBtn.addEventListener('click', () => { togglePin(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
     if(actionPrivateBtn) actionPrivateBtn.addEventListener('click', () => { togglePrivate(); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
     const actionShareBtn2 = document.getElementById('actionShareBtn2');
-    const actionMailBtn2 = document.getElementById('actionMailBtn2');
     if(actionShareBtn2) actionShareBtn2.addEventListener('click', () => {
         if(mobileActionMenu) mobileActionMenu.style.display = 'none';
         const m = memos.find(x => x.id === currentMemoId);
         if(m) sharePrompt(m);
-    });
-    if(actionMailBtn2) actionMailBtn2.addEventListener('click', () => {
-        if(mobileActionMenu) mobileActionMenu.style.display = 'none';
-        const m = memos.find(x => x.id === currentMemoId);
-        if(m) { const body = encodeURIComponent(m.content || ''); const subj = encodeURIComponent(m.title || 'memoppaメモ'); window.open(`mailto:?subject=${subj}&body=${body}`); }
     });
     if(actionDeleteBtn) actionDeleteBtn.addEventListener('click', () => { directDelete(currentMemoId); if(mobileActionMenu) mobileActionMenu.style.display = 'none'; });
 
@@ -1234,19 +1204,6 @@ function setupEventListeners() {
     if(mainCopyBtn) mainCopyBtn.addEventListener('click', () => handleCopy(mainCopyBtn));
     if(mobileCopyBtn) mobileCopyBtn.addEventListener('click', () => handleCopy(mobileCopyBtn));
 
-    const handleMail = async (btnElement) => {
-        if (!targetEmailInput || !targetEmailInput.value) { alert('Settingsで転送先メールアドレスを登録してください'); return; }
-        if(!currentMemoId || !memoContent) return;
-        const originalHtml = btnElement.innerHTML; btnElement.innerHTML = '<span class="material-symbols-rounded" style="color:var(--text-secondary); animation: spin 2s linear infinite;">hourglass_empty</span>';
-        try {
-            const formData = new URLSearchParams(); formData.append('to', targetEmailInput.value); formData.append('subject', `[memoppa] ${memoTitle.value || '無題のメモ'}`); formData.append('body', memoContent.innerText || '');
-            await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: formData });
-            btnElement.innerHTML = '<span class="material-symbols-rounded" style="color:var(--accent-color);">check_circle</span>'; 
-            showToast('メールを送信しました！', 'send');
-            setTimeout(() => btnElement.innerHTML = originalHtml, 2500);
-        } catch (error) { showToast('送信に失敗しました', 'error'); btnElement.innerHTML = originalHtml; }
-    };
-    if(mainMailBtn) mainMailBtn.addEventListener('click', () => handleMail(mainMailBtn));
     const openInWebappBtn = document.getElementById('openInWebappBtn');
     if(openInWebappBtn) openInWebappBtn.addEventListener('click', () => {
         if (!currentMemoId) return;
@@ -1667,7 +1624,6 @@ function setupEventListeners() {
     if(defaultAiSelect) defaultAiSelect.addEventListener('change', (e) => { defaultAi = e.target.value; saveUserSettings({ defaultAi }); showToast(defaultAi ? `宛先AIを${AI_DESTINATIONS[defaultAi].name}に設定しました` : '宛先AIを解除しました', 'bolt'); });
     // font-size-btn-pc/mobileのイベントは上で登録済み
     
-    if(saveEmailBtn) saveEmailBtn.addEventListener('click', () => { targetEmail = targetEmailInput.value; saveUserSettings({ targetEmail }); const o = saveEmailBtn.textContent; saveEmailBtn.textContent = "✔ Registered"; setTimeout(() => saveEmailBtn.textContent = o, 2000); });
 
     if(exportAiBtn) {
         exportAiBtn.addEventListener('click', () => {
@@ -1886,6 +1842,7 @@ function togglePin() {
         m.updatedAt = new Date().toISOString();
         cloudSaveMemo(m);
         renderMemoList();
+        if (m.isPinned && !wasPinned) notifyFirstPinIfNeeded();
         updateMainActionButtons(m);
         // ツールバーのピンアイコンの色を更新
         if(mobilePinBtn) {
@@ -2438,9 +2395,23 @@ function directRestore(id) {
     const m = memos.find(x => x.id === id);
     if (m && m.isTrashed) { m.isTrashed = false; cloudSaveMemo(m); renderMemoList(); showToast('メモを復元しました', 'restore_from_trash'); }
 }
+// 初めてピン留めした時だけ、行き先（ピンタブ）を知らせるトーストを一度出す
+function notifyFirstPinIfNeeded() {
+    try {
+        if (localStorage.getItem('memoppa_seenPinHint')) return;
+        localStorage.setItem('memoppa_seenPinHint', '1');
+        showToast('📌 ピン留めしたメモは「ピン」タブから見られます', 'push_pin');
+    } catch (e) {}
+}
+
 function directPin(id) {
     const m = memos.find(x => x.id === id);
-    if (m && !m.isTrashed) { m.isPinned = !m.isPinned; cloudSaveMemo(m); renderMemoList(); }
+    if (m && !m.isTrashed) {
+        m.isPinned = !m.isPinned;
+        cloudSaveMemo(m);
+        renderMemoList();
+        if (m.isPinned) notifyFirstPinIfNeeded();
+    }
 }
 function directPrivate(id) {
     const m = memos.find(x => x.id === id);
@@ -2854,7 +2825,10 @@ async function openShareReviewModal(memo) {
                 </div>
             `}
             ${isExtensionEnv() ? '' : `
-            <div class="share-review-password">
+            <button type="button" class="share-review-more-toggle" id="shareReviewMoreToggle">
+                もっと見る <span class="material-symbols-rounded">expand_more</span>
+            </button>
+            <div class="share-review-password hidden" id="shareReviewPasswordWrap">
                 <label class="share-review-password-toggle">
                     <input type="checkbox" id="shareReviewPasswordToggle">
                     🔒 合言葉を設定する（知っている人だけ閲覧できます）
@@ -2873,6 +2847,15 @@ async function openShareReviewModal(memo) {
     setTimeout(() => modal.classList.add('show'), 10);
 
     const liveTextEl = modal.querySelector('#shareReviewLiveText');
+    const moreToggle = modal.querySelector('#shareReviewMoreToggle');
+    const pwWrap = modal.querySelector('#shareReviewPasswordWrap');
+    if (moreToggle && pwWrap) moreToggle.addEventListener('click', () => {
+        const isOpen = !pwWrap.classList.contains('hidden');
+        pwWrap.classList.toggle('hidden', isOpen);
+        moreToggle.innerHTML = isOpen
+            ? 'もっと見る <span class="material-symbols-rounded">expand_more</span>'
+            : '閉じる <span class="material-symbols-rounded">expand_less</span>';
+    });
     const pwToggle = modal.querySelector('#shareReviewPasswordToggle');
     const pwInput = modal.querySelector('#shareReviewPasswordInput');
     if (pwToggle) pwToggle.addEventListener('change', () => {
@@ -3190,7 +3173,6 @@ function loadUserSettings() {
             fontSizeMobile = data.fontSizeMobile || '15px';
             currentFontFamily = isMobileDevice() ? fontFamilyMobile : fontFamilyPc;
             currentFontSize = isMobileDevice() ? fontSizeMobile : fontSizePc;
-            if (data.targetEmail) { targetEmail = data.targetEmail; if(targetEmailInput) targetEmailInput.value = targetEmail; }
             if (typeof data.defaultAi === 'string') { defaultAi = data.defaultAi; const sel = document.getElementById('defaultAiSelect'); if(sel) sel.value = defaultAi; }
             if (data.isSidebarPinned && pinSidebarBtn) { isSidebarPinned = data.isSidebarPinned; document.body.classList.toggle('sidebar-pinned', isSidebarPinned); pinSidebarBtn.classList.toggle('active', isSidebarPinned); }
             if (data.editorWide) { document.body.classList.add('editor-narrow'); } else { document.body.classList.remove('editor-narrow'); }
@@ -3506,6 +3488,7 @@ function updateCharCount() { if(charCount && memoContent) { const text = memoCon
 function setFilter(filter) {
     currentFilter = filter;
     if(allBtn) allBtn.classList.toggle('active', filter === 'all');
+    if(pinFilterBtn) pinFilterBtn.classList.toggle('active', filter === 'pin');
     if(promptFilterBtn) promptFilterBtn.classList.toggle('active', filter === 'prompt');
     if(trashBtn) trashBtn.classList.toggle('active', filter === 'trash');
     // ･･メニューのアクティブ表示
@@ -3533,7 +3516,8 @@ function setFilter(filter) {
 
 function getFilteredMemos() {
     let filtered = memos;
-    if (currentFilter === 'all') filtered = filtered.filter(m => !m.isTrashed);
+    if (currentFilter === 'all') filtered = filtered.filter(m => !m.isTrashed && !m.isPinned);
+    else if (currentFilter === 'pin') filtered = filtered.filter(m => m.isPinned && !m.isTrashed);
     else if (currentFilter === 'prompt') filtered = filtered.filter(m => m.isPrompt && !m.isTrashed);
     else if (currentFilter === 'trash') filtered = filtered.filter(m => m.isTrashed);
 
@@ -3587,9 +3571,22 @@ function updatePromptCountBadge() {
     }
 }
 
+function updatePinCountBadge() {
+    const badge = document.getElementById('pinCountBadge');
+    if(!badge) return;
+    const count = memos.filter(m => m.isPinned && !m.isTrashed).length;
+    if(count === 0) {
+        badge.classList.add('hidden');
+    } else {
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+    }
+}
+
 function renderMemoList() {
     if(!memoList) return;
     updatePromptCountBadge();
+    updatePinCountBadge();
     renderQuickPromptBar();
     memoList.innerHTML = '';
     const filteredMemos = getFilteredMemos();
