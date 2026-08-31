@@ -1776,7 +1776,13 @@ function selectMemo(id, openEditorInMobile = true) {
         }
     }
     currentMemoId = id; const memo = memos.find(m => m.id === id);
-    try { localStorage.setItem('memoppa_lastMemoId', id); } catch(e) {}
+    try {
+        localStorage.setItem('memoppa_lastMemoId', id);
+        // タブ（一覧・ピン）ごとにも「最後に開いたメモ」を記憶しておく
+        if (currentFilter === 'all' || currentFilter === 'pin') {
+            localStorage.setItem('memoppa_lastMemo_' + currentFilter, id);
+        }
+    } catch(e) {}
     renderLastMemoShortcut();
     updateShareImageUI(memo);
     if (memo) {
@@ -3349,6 +3355,7 @@ function renderPromptHub(query = '', activeTag = null) {
         // コピーボタン
         card.querySelector('.phc-copy-btn').addEventListener('click', (e) => {
             e.stopPropagation();
+            try { localStorage.setItem('memoppa_lastUsedPromptId', m.id); } catch(err) {}
             const copyBtn = e.currentTarget;
             const hasVars = /\{\{[^}]+\}\}/.test(m.content);
             if(hasVars) { copyPromptWithVars(m); return; }
@@ -3503,6 +3510,19 @@ function setFilter(filter) {
         appContainer?.classList.add('prompt-hub-active');
         renderPromptHub();
         showMobileEditor(); // スマホでもmainContentを表示（promptHubViewはその中にある）
+        // 前回使ったプロンプトがあれば、そこまでスクロールして一瞬ハイライトする
+        let lastPromptId = null;
+        try { lastPromptId = localStorage.getItem('memoppa_lastUsedPromptId'); } catch(e) {}
+        if (lastPromptId) {
+            setTimeout(() => {
+                const card = document.querySelector(`.phc-left[data-id="${lastPromptId}"]`)?.closest('.prompt-hub-card');
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.classList.add('phc-last-used-highlight');
+                    setTimeout(() => card.classList.remove('phc-last-used-highlight'), 1600);
+                }
+            }, 80);
+        }
     } else {
         promptHubView?.classList.add('hidden');
         editorContainer?.classList.remove('hidden');
@@ -3512,6 +3532,16 @@ function setFilter(filter) {
     // promptフィルタ以外はスマホでサイドバーに戻す。promptはshowMobileEditorで対応済みなのでここではスキップ
     if(filter !== 'prompt') showMobileList();
     renderMemoList();
+
+    // 一覧・ピンタブは、そのタブで前回開いていたメモがあれば自動的に開く
+    if (filter === 'all' || filter === 'pin') {
+        let lastId = null;
+        try { lastId = localStorage.getItem('memoppa_lastMemo_' + filter); } catch(e) {}
+        if (lastId) {
+            const stillExists = getFilteredMemos().some(m => m.id === lastId);
+            if (stillExists) selectMemo(lastId, true);
+        }
+    }
 }
 
 function getFilteredMemos() {
@@ -3571,22 +3601,10 @@ function updatePromptCountBadge() {
     }
 }
 
-function updatePinCountBadge() {
-    const badge = document.getElementById('pinCountBadge');
-    if(!badge) return;
-    const count = memos.filter(m => m.isPinned && !m.isTrashed).length;
-    if(count === 0) {
-        badge.classList.add('hidden');
-    } else {
-        badge.textContent = count;
-        badge.classList.remove('hidden');
-    }
-}
 
 function renderMemoList() {
     if(!memoList) return;
     updatePromptCountBadge();
-    updatePinCountBadge();
     renderQuickPromptBar();
     memoList.innerHTML = '';
     const filteredMemos = getFilteredMemos();
