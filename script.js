@@ -630,24 +630,34 @@ function stopLoginLoadingAnimation(originalText) {
     googleLoginBtn.innerHTML = originalText;
 }
 
+let loginInProgress = false;
 googleLoginBtn?.addEventListener('click', async () => {
+    if (loginInProgress) return; // 二重クリック・多重実行防止
+    loginInProgress = true;
+    if (googleLoginBtn) googleLoginBtn.disabled = true;
     const originalText = googleLoginBtn.innerHTML; startLoginLoadingAnimation();
+    const finish = (text) => { loginInProgress = false; if (googleLoginBtn) googleLoginBtn.disabled = false; stopLoginLoadingAnimation(text); };
     if (isExtensionEnv()) {
         // Chrome拡張: launchWebAuthFlow方式（MV3ではsignInWithPopupが通らないため）
         if (GOOGLE_OAUTH_CLIENT_ID.includes('XXXX')) {
             alert('拡張機能でのログインには、OAuthクライアントIDの設定が必要です。\nGoogle Cloud Console → APIとサービス → 認証情報 のWebクライアントIDをコードに設定してください。');
-            stopLoginLoadingAnimation(originalText); return;
+            finish(originalText); return;
         }
-        try { await signInWithChromeIdentity(); }
+        try { await signInWithChromeIdentity(); loginInProgress = false; if (googleLoginBtn) googleLoginBtn.disabled = false; }
         catch (error) {
             console.error('[memoppa] identity sign-in error:', error.message);
-            alert(`ログインに失敗しました (${error.message})`);
-            stopLoginLoadingAnimation(originalText);
+            if (error.message === 'Only one web auth flow is allowed at a time.') {
+                alert('前回のログイン試行がまだ終わっていないようです。少し待ってからもう一度お試しください（改善しない場合はタブを閉じて開き直してください）。');
+            } else {
+                alert(`ログインに失敗しました (${error.message})`);
+            }
+            finish(originalText);
         }
         return;
     }
     try {
         await signInWithPopup(auth, provider);
+        loginInProgress = false; if (googleLoginBtn) googleLoginBtn.disabled = false;
     } catch (error) {
         console.error('[memoppa] sign-in error:', error.code, error.message);
         // ポップアップがブロックされる環境ではリダイレクト方式に切替
@@ -659,7 +669,7 @@ googleLoginBtn?.addEventListener('click', async () => {
         } else {
             alert(`ログインに失敗しました (${error.code})`);
         }
-        stopLoginLoadingAnimation(originalText);
+        finish(originalText);
     }
 });
 
@@ -3589,22 +3599,10 @@ function formatDate(isoString) {
     return `${yy}/${d.getMonth()+1}/${d.getDate()}`;
 }
 
-function updatePromptCountBadge() {
-    const badge = document.getElementById('promptCountBadge');
-    if(!badge) return;
-    const count = memos.filter(m => m.isPrompt && !m.isTrashed).length;
-    if(count === 0) {
-        badge.classList.add('hidden');
-    } else {
-        badge.textContent = count;
-        badge.classList.remove('hidden');
-    }
-}
 
 
 function renderMemoList() {
     if(!memoList) return;
-    updatePromptCountBadge();
     renderQuickPromptBar();
     memoList.innerHTML = '';
     const filteredMemos = getFilteredMemos();
