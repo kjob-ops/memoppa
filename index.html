@@ -33,8 +33,10 @@
     <meta name="twitter:image:alt" content="memoppa">
     
     <title>memoppa — そのプロンプト、誰かが使ってる。</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" />
     <link rel="icon" type="image/svg+xml" href="memoppa-icon.svg">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0F6E56">
@@ -42,7 +44,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=74"></head>
+    <link rel="stylesheet" href="styles.css?v=78"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -51,6 +53,15 @@
   }
 </script>
 <body>
+<!-- JSの読み込み・実行を待たずに、CSSだけで即座に表示される簡易スプラッシュ。
+     loginScreen/appContainerのどちらかが表示された瞬間にJS側で非表示にする（script.js参照） -->
+<div id="instantSplash" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#f8f9fa;">
+    <img src="memoppa-icon.svg" alt="" width="56" height="56" style="border-radius:14px;animation:instantSplashBounce 1s ease-in-out infinite;">
+</div>
+<style>
+@keyframes instantSplashBounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@media (prefers-color-scheme: dark) { #instantSplash { background:#1a1a1a; } }
+</style>
 <!-- Google Tag Manager (noscript) -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M8STT8BH"
 height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
@@ -689,7 +700,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=74"></script>
+    <script src="app.bundle.js?v=78"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

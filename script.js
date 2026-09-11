@@ -221,6 +221,7 @@ function showToastWithUndo(message, onUndo) {
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     document.getElementById('authLoadingScreen')?.classList.add('hidden');
+    document.getElementById('instantSplash')?.remove(); // JS実行前の簡易スプラッシュを、本来の画面に切り替わるタイミングで消す
     if (user) {
         currentUser = user; 
         loginScreen?.classList.add('hidden'); 
@@ -1055,15 +1056,23 @@ function setupEventListeners() {
     // クリップボード画像ペースト
     const memoContent = document.getElementById('memoContent');
     if(memoContent) memoContent.addEventListener('paste', async (e) => {
-        if(!isDriveAttachEnabled()) return;
         const items = Array.from(e.clipboardData?.items||[]).filter(i => i.type.startsWith('image/'));
-        if(!items.length) return;
-        e.preventDefault();
-        for(const item of items) {
-            const file = item.getAsFile();
-            if(!file) continue;
-            const ext = file.type === 'image/png' ? 'png' : 'jpg';
-            await handleAttachFiles([new File([file], `paste_${Date.now()}.${ext}`, { type: file.type })]);
+        if(isDriveAttachEnabled() && items.length) {
+            e.preventDefault();
+            for(const item of items) {
+                const file = item.getAsFile();
+                if(!file) continue;
+                const ext = file.type === 'image/png' ? 'png' : 'jpg';
+                await handleAttachFiles([new File([file], `paste_${Date.now()}.${ext}`, { type: file.type })]);
+            }
+            return;
+        }
+        // 画像以外の貼り付けは、他アプリの書式（空の箇条書きなど）を持ち込まないよう
+        // プレーンテキストとして挿入する（リンクは後で自動的にリンク化される）
+        const text = e.clipboardData?.getData('text/plain');
+        if (text) {
+            e.preventDefault();
+            document.execCommand('insertText', false, text);
         }
     });
     if(mainPromptBtn) mainPromptBtn.addEventListener('click', () => togglePromptFlag());
@@ -1494,7 +1503,7 @@ function setupEventListeners() {
     if(memoContent) memoContent.addEventListener('input', triggerSave);
     // 本文中のURL文字列を、フォーカスを外れたタイミングで実際のリンク(<a>タグ)に変換する
     // （入力中に毎回変換するとカーソル位置がずれるため、編集を終えた瞬間だけ実行）
-    if(memoContent) memoContent.addEventListener('blur', () => { linkifyMemoContent(memoContent); });
+    if(memoContent) memoContent.addEventListener('blur', () => { removeEmptyListItems(memoContent); linkifyMemoContent(memoContent); });
 
     if(maskToggleButton) maskToggleButton.addEventListener('click', () => { isMasked = !isMasked; updateMaskButtonIcon(); document.body.classList.toggle('mask-mode', isMasked); });
 
@@ -3794,7 +3803,6 @@ let memoListSortable = null;
 function initMemoListSortable() {
     if (memoListSortable) { memoListSortable.destroy(); memoListSortable = null; }
     if (!memoList) return;
-    if (isExtensionEnv()) return; // 拡張機能では並び替え機能自体を提供しない（シンプル化）
     if (typeof Sortable === 'undefined') { console.error('[memoppa] Sortable library not loaded'); return; }
     try {
     // マルチ選択中のみ無効化。並び替えモードは問わず常にドラッグ可能にする
@@ -3942,6 +3950,22 @@ function escapeHtml(text) { return text ? text.replace(/&/g, "&amp;").replace(/<
 // 本文中のプレーンテキストのURLを実際の<a>タグに変換する。
 // 既にリンク化されている部分（<a>タグの中）は対象外にするため、テキストノードだけを走査する。
 const LINKIFY_URL_RE = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]"'）」』】])/gi;
+// 他アプリからの貼り付けなどで生じた、空の箇条書き項目（テキストも画像も無いli）を取り除く。
+// 中身が空のulやolごと丸々空になった場合は、その親要素も一緒に消す。
+function removeEmptyListItems(el) {
+    if (!el) return;
+    let changed = false;
+    el.querySelectorAll('li').forEach(li => {
+        const hasText = li.textContent.replace(/\u200b|\u00a0/g, '').trim().length > 0;
+        const hasMedia = li.querySelector('img, a, iframe');
+        if (!hasText && !hasMedia) { li.remove(); changed = true; }
+    });
+    el.querySelectorAll('ul, ol').forEach(list => {
+        if (list.children.length === 0) { list.remove(); changed = true; }
+    });
+    if (changed) memo_linkify_touch(el);
+}
+
 function linkifyMemoContent(el) {
     if (!el) return;
     // すでにフォーカスが外れていて選択範囲を気にする必要が無いタイミングでのみ呼ばれる想定
