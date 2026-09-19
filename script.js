@@ -46,6 +46,7 @@ document.addEventListener('click', (e) => {
     window.open(href, '_blank', 'noopener,noreferrer');
 });
 let currentFilter = 'all'; 
+let customTabs = []; // ユーザーが自由に作成・並び替えできるタブ（各要素: {id, name, tag}）
 const expandedTagsIds = new Set();
 let currentSortIndex = 0; 
 let currentSearch = '';
@@ -1086,6 +1087,8 @@ function setupEventListeners() {
     });
     if(promptFilterBtn) promptFilterBtn.addEventListener('click', () => setFilter('prompt'));
     if(pinFilterBtn) pinFilterBtn.addEventListener('click', () => setFilter('pin'));
+    const addCustomTabBtn = document.getElementById('addCustomTabBtn');
+    if(addCustomTabBtn) addCustomTabBtn.addEventListener('click', () => showCreateCustomTabModal());
     // ･･メニュー
     const filterMoreBtn = document.getElementById('filterMoreBtn');
     const filterMoreMenu = document.getElementById('filterMoreMenu');
@@ -1798,7 +1801,7 @@ function selectMemo(id, openEditorInMobile = true) {
     try {
         localStorage.setItem('memoppa_lastMemoId', id);
         // タブ（一覧・ピン）ごとにも「最後に開いたメモ」を記憶しておく
-        if (currentFilter === 'all' || currentFilter === 'pin') {
+        if (currentFilter === 'all' || currentFilter === 'pin' || currentFilter.startsWith('custom:')) {
             localStorage.setItem('memoppa_lastMemo_' + currentFilter, id);
         }
     } catch(e) {}
@@ -3179,6 +3182,155 @@ async function cloudDeleteMemo(memoId) {
 
 let onboardingChecked = false;
 
+let customTabsSortable = null;
+function renderCustomTabs() {
+    const list = document.getElementById('customTabsList');
+    const divider = document.getElementById('customTabsDivider');
+    if (!list) return;
+    divider?.classList.toggle('hidden', customTabs.length === 0);
+    list.innerHTML = customTabs.map(t => `
+        <button class="custom-tab-btn ${currentFilter === 'custom:' + t.id ? 'active' : ''}" data-tab-id="${t.id}">
+            <svg class="drag-dots" width="9" height="13" viewBox="0 0 9 13" fill="currentColor"><circle cx="2" cy="2" r="1.3"/><circle cx="7" cy="2" r="1.3"/><circle cx="2" cy="6.5" r="1.3"/><circle cx="7" cy="6.5" r="1.3"/><circle cx="2" cy="11" r="1.3"/><circle cx="7" cy="11" r="1.3"/></svg>
+            <span>${escapeHtml(t.name)}</span>
+        </button>
+    `).join('');
+    list.querySelectorAll('.custom-tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            if (isCustomTabDragging) return; // ドラッグ操作の末尾クリックで誤発火しないようガード
+            setFilter('custom:' + btn.dataset.tabId);
+        });
+        let pressTimer;
+        const startPress = () => { pressTimer = setTimeout(() => showCustomTabMenu(btn.dataset.tabId), 500); };
+        const cancelPress = () => clearTimeout(pressTimer);
+        btn.addEventListener('touchstart', startPress, {passive: true});
+        btn.addEventListener('touchend', cancelPress);
+        btn.addEventListener('touchmove', cancelPress, {passive: true});
+        btn.addEventListener('mousedown', startPress);
+        btn.addEventListener('mouseup', cancelPress);
+        btn.addEventListener('mouseleave', cancelPress);
+    });
+    if (customTabsSortable) { customTabsSortable.destroy(); customTabsSortable = null; }
+    if (typeof Sortable !== 'undefined' && list.children.length > 1) {
+        customTabsSortable = Sortable.create(list, {
+            animation: 150, delay: 200, delayOnTouchOnly: true, direction: 'horizontal',
+            ghostClass: 'sortable-ghost',
+            onStart: () => { isCustomTabDragging = true; },
+            onEnd: (evt) => {
+                setTimeout(() => { isCustomTabDragging = false; }, 50); // クリックイベントより後にガードを解除
+                if (evt.oldIndex === evt.newIndex) return;
+                const moved = customTabs.splice(evt.oldIndex, 1)[0];
+                customTabs.splice(evt.newIndex, 0, moved);
+                saveUserSettings({ customTabs });
+            }
+        });
+    }
+}
+let isCustomTabDragging = false;
+
+function showCustomTabMenu(tabId) {
+    const tab = customTabs.find(t => t.id === tabId);
+    if (!tab) return;
+    if (confirm(`「${tab.name}」タブを削除しますか？\n（タグやメモ自体は消えません）`)) {
+        customTabs = customTabs.filter(t => t.id !== tabId);
+        if (currentFilter === 'custom:' + tabId) setFilter('all');
+        saveUserSettings({ customTabs });
+        renderCustomTabs();
+    }
+}
+
+function createCustomTab(name, tag) {
+    const id = 'tab_' + Date.now();
+    customTabs.push({ id, name, tag });
+    saveUserSettings({ customTabs });
+    renderCustomTabs();
+    setFilter('custom:' + id);
+}
+
+// 「＋」から開く、新しいタブ作成モーダル
+function showCreateCustomTabModal() {
+    const existing = document.getElementById('createTabOverlay');
+    if (existing) existing.remove();
+
+    // 既存メモから使われているタグを集計（多い順）
+    const tagMap = new Map();
+    memos.forEach(m => {
+        if (m.isTrashed || m.isPrivate) return;
+        extractTags(m.content).forEach(tag => tagMap.set(tag, (tagMap.get(tag) || 0) + 1));
+    });
+    const sortedTags = Array.from(tagMap.entries()).sort((a, b) => b[1] - a[1]).map(([tag]) => tag);
+
+    let selectedTag = sortedTags[0] || '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'createTabOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(20,20,20,0.42);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+    const sheet = document.createElement('div');
+    sheet.style.cssText = 'background:var(--bg-primary,#fff);width:100%;max-width:440px;border-radius:20px 20px 0 0;padding:22px 22px 26px 22px;box-sizing:border-box;box-shadow:0 -8px 30px rgba(0,0,0,0.18);';
+
+    const nameId = 'newTabNameInput';
+    sheet.innerHTML = `
+        <div style="width:36px;height:4px;border-radius:2px;background:var(--border-color);margin:0 auto 18px auto;"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+            <span style="font-size:17px;font-weight:800;">新しいタブを作成</span>
+            <button id="createTabCloseBtn" style="width:30px;height:30px;border-radius:50%;border:none;background:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;"><span class="material-symbols-rounded">close</span></button>
+        </div>
+        <label style="display:block;font-size:12.5px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">タブの名前</label>
+        <input type="text" id="${nameId}" placeholder="例: 仕事" style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:12px;border:1.5px solid var(--border-color);font-size:15px;font-weight:600;margin-bottom:20px;outline:none;background:var(--bg-primary);color:var(--text-primary);">
+        <label style="display:block;font-size:12.5px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;">このタグが付いたメモを表示</label>
+        <div id="createTabTagChips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;max-height:160px;overflow-y:auto;">
+            ${sortedTags.length ? sortedTags.map(tag => `<button type="button" class="create-tab-chip" data-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join('')
+                : `<span style="font-size:13px;color:var(--text-secondary);">まだタグが付いたメモがありません。本文に #タグ名 と書くと使えるようになります。</span>`}
+        </div>
+        <div style="display:flex;gap:10px;">
+            <button id="createTabCancelBtn" style="flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border-color);background:none;color:var(--text-secondary);font-size:14px;font-weight:700;cursor:pointer;">キャンセル</button>
+            <button id="createTabSubmitBtn" style="flex:1.4;padding:13px;border-radius:12px;border:none;background:var(--accent-color);color:#fff;font-size:14px;font-weight:700;cursor:pointer;" ${sortedTags.length ? '' : 'disabled'}>タブを作成</button>
+        </div>
+    `;
+
+    const chipStyleId = 'createTabChipStyle';
+    if (!document.getElementById(chipStyleId)) {
+        const style = document.createElement('style');
+        style.id = chipStyleId;
+        style.textContent = `
+            .create-tab-chip { padding:8px 14px;border-radius:16px;background:var(--bg-primary);border:1px solid var(--border-color);color:var(--text-secondary);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit; }
+            .create-tab-chip.selected { background:var(--accent-color);color:#fff;border-color:var(--accent-color); }
+        `;
+        document.head.appendChild(style);
+    }
+
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+
+    const nameInput = document.getElementById(nameId);
+    const updateChipSelection = () => {
+        sheet.querySelectorAll('.create-tab-chip').forEach(chip => {
+            chip.classList.toggle('selected', chip.dataset.tag === selectedTag);
+        });
+    };
+    if (selectedTag && !nameInput.value) nameInput.value = selectedTag;
+    updateChipSelection();
+
+    sheet.querySelectorAll('.create-tab-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            selectedTag = chip.dataset.tag;
+            updateChipSelection();
+            if (!nameInput.value || sortedTags.includes(nameInput.value)) nameInput.value = selectedTag;
+        });
+    });
+    document.getElementById('createTabCloseBtn').addEventListener('click', () => overlay.remove());
+    document.getElementById('createTabCancelBtn').addEventListener('click', () => overlay.remove());
+    document.getElementById('createTabSubmitBtn').addEventListener('click', () => {
+        const name = nameInput.value.trim();
+        if (!name) { nameInput.focus(); return; }
+        if (!selectedTag) return;
+        createCustomTab(name, selectedTag);
+        overlay.remove();
+    });
+    nameInput.focus();
+}
+
 function loadUserSettings() { 
     const prefsRef = doc(db, "users", currentUser.uid, "settings", "preferences");
     onSnapshot(prefsRef, (docSnap) => {
@@ -3201,6 +3353,8 @@ function loadUserSettings() {
             if (typeof data.defaultAi === 'string') { defaultAi = data.defaultAi; const sel = document.getElementById('defaultAiSelect'); if(sel) sel.value = defaultAi; }
             if (data.isSidebarPinned && pinSidebarBtn) { isSidebarPinned = data.isSidebarPinned; document.body.classList.toggle('sidebar-pinned', isSidebarPinned); pinSidebarBtn.classList.toggle('active', isSidebarPinned); }
             if (data.editorWide) { document.body.classList.add('editor-narrow'); } else { document.body.classList.remove('editor-narrow'); }
+            customTabs = Array.isArray(data.customTabs) ? data.customTabs : [];
+            renderCustomTabs();
             applySettings();
         }
     });
@@ -3517,6 +3671,7 @@ function setFilter(filter) {
     if(pinFilterBtn) pinFilterBtn.classList.toggle('active', filter === 'pin');
     if(promptFilterBtn) promptFilterBtn.classList.toggle('active', filter === 'prompt');
     if(trashBtn) trashBtn.classList.toggle('active', filter === 'trash');
+    renderCustomTabs();
     // ･･メニューのアクティブ表示
     const filterMoreBtn = document.getElementById('filterMoreBtn');
     if(filterMoreBtn) filterMoreBtn.classList.toggle('active', filter === 'archive' || filter === 'trash');
@@ -3552,8 +3707,8 @@ function setFilter(filter) {
     if(filter !== 'prompt') showMobileList();
     renderMemoList();
 
-    // 一覧・ピンタブは、そのタブで前回開いていたメモがあれば自動的に開く
-    if (filter === 'all' || filter === 'pin') {
+    // 一覧・ピン・カスタムタブは、そのタブで前回開いていたメモがあれば自動的に開く
+    if (filter === 'all' || filter === 'pin' || filter.startsWith('custom:')) {
         let lastId = null;
         try { lastId = localStorage.getItem('memoppa_lastMemo_' + filter); } catch(e) {}
         if (lastId) {
@@ -3569,6 +3724,11 @@ function getFilteredMemos() {
     else if (currentFilter === 'pin') filtered = filtered.filter(m => m.isPinned && !m.isTrashed);
     else if (currentFilter === 'prompt') filtered = filtered.filter(m => m.isPrompt && !m.isTrashed);
     else if (currentFilter === 'trash') filtered = filtered.filter(m => m.isTrashed);
+    else if (currentFilter.startsWith('custom:')) {
+        const tab = customTabs.find(t => t.id === currentFilter.slice(7));
+        const targetTag = tab ? tab.tag.toLowerCase() : null;
+        filtered = filtered.filter(m => !m.isTrashed && targetTag && extractTags(m.content).map(t => t.toLowerCase()).includes(targetTag));
+    }
 
     if (currentSearch) {
         filtered = filtered.filter(m => {
