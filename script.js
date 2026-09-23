@@ -222,7 +222,12 @@ function showToastWithUndo(message, onUndo) {
 // ==========================================
 onAuthStateChanged(auth, (user) => {
     document.getElementById('authLoadingScreen')?.classList.add('hidden');
-    document.getElementById('instantSplash')?.remove(); // JS実行前の簡易スプラッシュを、本来の画面に切り替わるタイミングで消す
+    // JS実行前の簡易スプラッシュを、本来の画面に切り替わるタイミングでフェードアウトさせてから消す
+    const splash = document.getElementById('instantSplash');
+    if (splash) {
+        splash.classList.add('instant-splash-out');
+        setTimeout(() => splash.remove(), 380);
+    }
     if (user) {
         currentUser = user; 
         loginScreen?.classList.add('hidden'); 
@@ -903,8 +908,26 @@ function toggleSidebar(forceClose = false) {
         document.body.classList.add('sidebar-open');
     }
 }
-function showMobileEditor() { appContainer?.classList.add('sp-view-editor'); }
+let mobileHistoryPushed = false;
+function showMobileEditor() {
+    appContainer?.classList.add('sp-view-editor');
+    // スマホでは「一覧→編集」の遷移で履歴を1つ積み、ブラウザの戻るボタンで
+    // アプリの外（ホーム画面等）に出ず、一覧に戻れるようにする
+    if (window.innerWidth <= 768 && !mobileHistoryPushed) {
+        try { history.pushState({ memoppaView: 'editor' }, ''); mobileHistoryPushed = true; } catch(e) {}
+    }
+}
 function showMobileList() { appContainer?.classList.remove('sp-view-editor'); }
+// 「一覧に戻る」操作（戻るボタン・スワイプ）の入口はここに一本化する。
+// 履歴を積んでいる場合はhistory.back()を呼び、実際の画面切り替えはpopstateハンドラで行う
+// （これにより、ブラウザの戻るボタンを押した時の挙動と完全に一致する）
+function exitMobileEditorViaBack() {
+    if (mobileHistoryPushed) { history.back(); }
+    else { showMobileList(); }
+}
+window.addEventListener('popstate', () => {
+    if (mobileHistoryPushed) { mobileHistoryPushed = false; showMobileList(); }
+});
 
 // スマホ版：画面左端からのスワイプで一覧に戻る（iOSのネイティブ戻るジェスチャーに近い挙動）
 function setupMobileSwipeBack() {
@@ -940,7 +963,7 @@ function setupMobileSwipeBack() {
         const dx = t.clientX - startX, dy = t.clientY - startY;
         if (dx > THRESHOLD && Math.abs(dy) < MAX_VERTICAL) {
             updateCurrentMemo();
-            showMobileList();
+            exitMobileEditorViaBack();
         }
     });
 }
@@ -1042,7 +1065,7 @@ function setupEventListeners() {
     });
     if(mobileNewMemoFab) mobileNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
     if(promptHubNewMemoFab) promptHubNewMemoFab.addEventListener('click', () => { createNewMemo(); showMobileEditor(); });
-    if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); showMobileList(); });
+    if(backToListBtn) backToListBtn.addEventListener('click', () => { updateCurrentMemo(); exitMobileEditorViaBack(); });
     setupMobileSwipeBack();
     const promptHubBackBtn = document.getElementById('promptHubBackBtn');
     if(promptHubBackBtn) promptHubBackBtn.addEventListener('click', () => setFilter('all'));
@@ -3379,8 +3402,19 @@ function saveAndApplySettings() {
     saveUserSettings({ theme: currentTheme, fontFamilyPc, fontSizePc, fontFamilyMobile, fontSizeMobile });
     applySettings();
 }
+function updateStatusBarColor() {
+    const isDark = currentTheme === 'dark';
+    const color = isDark ? '#1e1e1e' : '#0F6E56';
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', color);
+    // iOSのステータスバー文字色：黒背景の上は白文字（black-translucent）、
+    // 明るい背景の上は黒文字（default）にする
+    const statusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (statusBarMeta) statusBarMeta.setAttribute('content', isDark ? 'black-translucent' : 'default');
+}
 function applySettings() {
     document.body.setAttribute('data-theme', currentTheme);
+    updateStatusBarColor();
     document.querySelectorAll('.logo-img-large').forEach(img => {
         img.src = currentTheme === 'dark' ? 'memoppa_logo_v7_clean_dark.svg' : 'memoppa_logo_v7_clean.svg';
     });

@@ -531,8 +531,8 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
 @media (max-width: 768px) {
     .pc-only { display: none !important; }
     .mobile-only { display: flex !important; }
-    .sidebar { position: relative; left: 0 !important; width: 100vw !important; height: 100dvh; border-right: none; box-shadow: none; transition: none; z-index: 1; padding: 12px 0 0 0;}
-    .main-content { display: none; width: 100vw !important; margin-left: 0 !important; padding: 0; z-index: 2; }
+    .sidebar { position: absolute; top: 0; left: 0; width: 100vw !important; height: 100dvh; border-right: none; box-shadow: none; z-index: 1; padding: 12px 0 0 0; transform: translateX(0%); transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
+    .main-content { position: absolute; top: 0; left: 0; width: 100vw !important; margin-left: 0 !important; padding: 0; z-index: 2; height: 100dvh; transform: translateX(100%); transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1); }
     
     .sidebar-header { display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin: 0 16px 12px 16px; padding: 0; }
     .sidebar-header.search-hidden, .sidebar-actions-grid.search-hidden, .filter-sort-row.search-hidden { display: none !important; }
@@ -546,8 +546,8 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
     .last-memo-shortcut { width: calc(100% - 32px); margin: 12px 16px 0; }
     .search-container { padding: 6px 12px; position: relative; }
     
-    .app-container.sp-view-editor .sidebar { display: none !important; }
-    .app-container.sp-view-editor .main-content { display: flex !important; }
+    .app-container.sp-view-editor .sidebar { transform: translateX(-25%); }
+    .app-container.sp-view-editor .main-content { transform: translateX(0%); }
     .search-mode-view { position: fixed; top: 0; left: 0; right: 0; bottom: 0; padding: 0; z-index: 1002; align-items: stretch; background: var(--bg-primary); }
     .search-mode-inner { border-radius: 0; max-height: 100dvh; height: 100dvh; padding: 0; box-shadow: none; display: flex; flex-direction: column; overflow-y: auto; }
     .search-mode-header.pc-only { display: none !important; }
