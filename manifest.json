@@ -1,50 +1,17 @@
 {
-  "name": "memoppa",
-  "short_name": "memoppa",
-  "description": "そのプロンプト、誰かが使ってる。シェアしたプロンプトの反応が見える、プロンプト専用メモ帳。",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#0F6E56",
-  "theme_color": "#0F6E56",
-  "orientation": "any",
-  "lang": "ja",
-  "icons": [
-    {
-      "src": "memoppa-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "memoppa-icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "form_factor": "wide",
-      "label": "memoppa - AIの作業机"
-    }
-  ],
-  "categories": ["productivity", "utilities"],
-  "shortcuts": [
-    {
-      "name": "新規メモ",
-      "short_name": "新規",
-      "description": "新しいメモを作成する",
-      "url": "/?action=new",
-      "icons": [{ "src": "memoppa-icon.svg", "sizes": "any" }]
-    }
+  "manifest_version": 3,
+  "name": "memoppa - AIプロンプトが育つメモ帳",
+  "version": "1.6.0",
+  "description": "そのプロンプト、どこに置いた？新しいタブがAIの作業机になるメモ帳。プロンプトを登録して、2秒でコピー。全デバイスで同期。",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "permissions": [
+    "identity"
   ]
 }

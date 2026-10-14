@@ -1,13 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja" translate="no" data-theme="light">
 <head>
-    <!-- Google Tag Manager -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-M8STT8BH');</script>
-    <!-- End Google Tag Manager -->
+<!-- Chrome拡張版: GTMは外部リモートスクリプトのためMV3のCSPでブロックされるので読み込まない -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="google" content="notranslate">
@@ -38,13 +32,12 @@
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" />
     <link rel="icon" type="image/svg+xml" href="memoppa-icon.svg">
-    <link rel="manifest" href="manifest.json">
+    <!-- Chrome拡張版: manifest.jsonは拡張機能のマニフェストなのでlink rel="manifest"は使わない -->
     <meta name="theme-color" content="#0F6E56">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="memoppa">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=83"></head>
+    <link rel="stylesheet" href="styles.css?v=84"></head>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -66,8 +59,7 @@
 #instantSplash.instant-splash-out { opacity: 0; transition: opacity 0.35s ease-out; pointer-events: none; }
 </style>
 <!-- Google Tag Manager (noscript) -->
-<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M8STT8BH"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- Chrome拡張版: GTM noscriptタグも除去（リモートiframeのため） -->
 <!-- End Google Tag Manager (noscript) -->
     <!-- 共有プロンプトプレビュー画面（未ログインでも閲覧可能） -->
     <div id="sharePreviewScreen" class="share-preview-screen hidden">
@@ -706,7 +698,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="app.bundle.js?v=83"></script>
+    <script src="app.bundle.js?v=84"></script>
 
     <!-- アカウント削除確認モーダル -->
     <div id="deleteAccountModal" class="settings-modal hidden" style="display:none; z-index:3000;">

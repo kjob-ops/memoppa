@@ -1299,7 +1299,8 @@ body.editor-narrow .action-btn .material-symbols-rounded { font-size: 14px; }
    Webアプリ本体はフル機能、拡張機能はシンプルな
    「書く・見る・使う」だけに絞る。
    ========================================== */
-body.is-extension .parent-btn { display: none !important; }
+body.is-extension .parent-btn,
+body.is-extension .child-add-btn { display: none !important; }
 body.is-extension #mainAttachBtn,
 body.is-extension #mobileAttachBtn { display: none !important; }
 body.is-extension .tag-list-search-mode .tag-search-mode-btn { display: none !important; }
@@ -1316,3 +1317,26 @@ body.is-extension .open-in-webapp-btn { display: inline-flex !important; }
 /* 本文中に自動変換されたリンクの見た目 */
 .memo-content a { color: var(--accent-color); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
 .memo-content a:hover { opacity: 0.8; }
+
+
+/* ==========================================
+   階層構造（親子メモ）
+   ========================================== */
+.swipe-container.tree-child .memo-item { border-left: 3px solid var(--accent-color); }
+.tree-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; padding: 0; margin: 0 2px 0 -4px; flex-shrink: 0;
+    background: none; border: none; border-radius: 6px; cursor: pointer;
+    color: var(--text-secondary, #888);
+}
+.tree-toggle:hover { background: rgba(128,128,128,0.18); }
+.tree-toggle .material-symbols-rounded { font-size: 20px; transition: transform 0.15s ease; }
+.tree-toggle.expanded .material-symbols-rounded { transform: rotate(90deg); }
+.tree-count {
+    flex-shrink: 0; margin-left: 4px; padding: 0 6px; min-width: 16px; height: 16px;
+    border-radius: 8px; font-size: 10.5px; font-weight: 700; line-height: 16px; text-align: center;
+    background: rgba(15,110,86,0.12); color: var(--accent-color);
+}
+@media (max-width: 768px) {
+    .tree-toggle { width: 28px; height: 28px; }
+}
